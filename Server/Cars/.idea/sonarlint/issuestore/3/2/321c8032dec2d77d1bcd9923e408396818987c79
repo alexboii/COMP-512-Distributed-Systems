@@ -1,0 +1,5 @@
+
+msquid:S00120"WRename this package name to match the regular expression '^[a-z]+(\.[a-z][a-z0-9]*)*$'.(á–Ì“
+4squid:S2131"Use "Integer.toString" instead.(Ñê¥…
+“squid:S1158"~Call the static method Integer.toString(...) instead of instantiating a temporary object to perform this to string conversion.(Ñê¥…
+6squid:S2129"!Remove this "Integer" constructor(Ñê¥…

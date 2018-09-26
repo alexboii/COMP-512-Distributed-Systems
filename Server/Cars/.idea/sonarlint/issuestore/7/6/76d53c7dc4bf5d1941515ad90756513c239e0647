@@ -1,0 +1,6 @@
+
+6squid:S1643"Use a StringBuilder instead.(žè»½úÿÿÿÿ
+msquid:S2975"SRemove this "clone" implementation; use a copy constructor or copy factory instead.(¯ÔÚ“ùÿÿÿÿ
+jsquid:S00116"ORename this field "m_ID" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(ÓÚªŠúÿÿÿÿ
+tsquid:S00116"YRename this field "m_reservations" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(¿–œ¼üÿÿÿÿ
+rsquid:S00120"WRename this package name to match the regular expression '^[a-z]+(\.[a-z][a-z0-9]*)*$'.(²êˆµùÿÿÿÿ
