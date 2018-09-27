@@ -36,7 +36,7 @@ MVN_DIRS="$CAR_DIR $FLIGHTS_DIR $ROOMS_DIR $MIDDLEWARE_DIR"
 JAR_COMMON_SUFFIX="-1.0-SNAPSHOT-jar-with-dependencies.jar"
 JAR_LOCATION="target/"
 JAR_CARS="$CARS$JAR_COMMON_SUFFIX"
-JAR_FLIGHTS="$FLIGHTS$JAR_COMMON_SUFFIX"
+JAR_FLIGHTS="Flight$JAR_COMMON_SUFFIX"
 JAR_ROOMS="$ROOMS$JAR_COMMON_SUFFIX"
 JAR_MIDDLEWARE="$MIDDLEWARE$JAR_COMMON_SUFFIX"
 CAR_JAR_LOCATION="$CAR_DIR$JAR_LOCATION$JAR_CARS"
@@ -83,10 +83,10 @@ sshpass -p $password scp -o StrictHostKeyChecking=no "$ROOT_DIR/java.policy" "$u
 #rm -rf "$ROOT_DIR/java.policy"
 
 
-echo INITIATE REGISTRIES FOR EVERY SERVER 
-for ENTITY_SERVER in ${ENTITIES_SERVERS}; do
-	sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ENTITY_SERVER" "$REGISTRY_COMMAND" 
-done
+#echo INITIATE REGISTRIES FOR EVERY SERVER 
+#for ENTITY_SERVER in ${ENTITIES_SERVERS}; do
+#	sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ENTITY_SERVER" "$REGISTRY_COMMAND" 
+#done
 
 #run the different servers on different machines
 

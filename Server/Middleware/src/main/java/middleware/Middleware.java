@@ -18,7 +18,7 @@ public class Middleware extends ResourceManager {
     public static void main(String[] args) {
 
         // Figure out where server is running
-        int port = 1099;
+        int port = 1088;
 
         if (args.length == 1) {
             port = Integer.parseInt(args[0]);
@@ -28,8 +28,8 @@ public class Middleware extends ResourceManager {
         }
 
         try {
-            // Create a new server object and dynamically generate the stub (client proxy)
-            Middleware obj = new Middleware();
+           Middleware obj = new Middleware();
+	       	// Create a new server object and dynamically generate the stub (client proxy)
             IResourceManager resourceManager = (IResourceManager) UnicastRemoteObject.exportObject(obj, 0);
 
             // Bind the remote object's stub in the registry
@@ -54,7 +54,7 @@ public class Middleware extends ResourceManager {
                     }
                 }
             });
-            System.out.println("'middleware' resource manager server ready and bound to '" + ServerConstants.MIDDLEWARE_PREFIX + "'");
+            System.out.println("'middleware' resource manager server ready and bound to '" + ServerConstants.MIDDLEWARE_PREFIX + port);
 
             System.out.println("Middleware server ready");
         } catch (Exception e) {
@@ -62,21 +62,22 @@ public class Middleware extends ResourceManager {
             e.printStackTrace();
         }
 
+	carsManager = connectServer(ServerConstants.CAR_SERVER_NAME, ServerConstants.CAR_SERVER_PORT, ServerConstants.CAR_PREFIX);
+        roomsManager = connectServer(ServerConstants.ROOMS_SERVER, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
+        flightsManager = connectServer(ServerConstants.FLIGHTS_SERVER_NAME, ServerConstants.FLIGHTS_SERVER_PORT, ServerConstants.FLIGHTS_PREFIX);
+
         // Create and install a security manager
         if (System.getSecurityManager() == null) {
             System.setSecurityManager(new RMISecurityManager());
         }
     }
 
-    private IResourceManager carsManager;
-    private IResourceManager flightsManager;
-    private IResourceManager roomsManager;
+    public static IResourceManager carsManager;
+    public static IResourceManager flightsManager;
+    public static IResourceManager roomsManager;
 
     public Middleware() {
         super(serverName);
-        this.carsManager = connectServer(ServerConstants.CAR_SERVER_NAME, ServerConstants.CAR_SERVER_PORT, ServerConstants.CAR_PREFIX);
-        this.roomsManager = connectServer(ServerConstants.ROOMS_SERVER, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
-        this.flightsManager = connectServer(ServerConstants.FLIGHTS_SERVER_NAME, ServerConstants.FLIGHTS_SERVER_PORT, ServerConstants.FLIGHTS_PREFIX);
     }
 
     @Override
@@ -184,7 +185,7 @@ public class Middleware extends ResourceManager {
         return null;
     }
 
-    private IResourceManager connectServer(String address, int port, String prefix) {
+    public static IResourceManager connectServer(String address, int port, String prefix) {
 
         IResourceManager m_resourceManager = null;
 
