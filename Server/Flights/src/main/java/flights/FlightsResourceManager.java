@@ -1,6 +1,7 @@
 package flights;
 
 import Constants.ServerConstants;
+import RM.IResourceManager;
 import RM.ResourceManager;
 
 import java.rmi.RMISecurityManager;
@@ -12,7 +13,7 @@ import java.rmi.server.UnicastRemoteObject;
 /**
  * Created by alex on 9/25/18.
  */
-public class FlightsResourceManager extends ResourceManager implements IFlightsResourceManager {
+public class FlightsResourceManager extends ResourceManager {
     private static final String serverName = "Flights";
 
     public FlightsResourceManager() {
@@ -21,7 +22,7 @@ public class FlightsResourceManager extends ResourceManager implements IFlightsR
 
     public static void main(String[] args) {
         // Figure out where server is running
-        int port = 1099;
+        int port = ServerConstants.FLIGHTS_SERVER_PORT;
 
         if (args.length == 1) {
             port = Integer.parseInt(args[0]);
@@ -33,13 +34,32 @@ public class FlightsResourceManager extends ResourceManager implements IFlightsR
         try {
             // Create a new server object and dynamically generate the stub (client proxy)
             FlightsResourceManager obj = new FlightsResourceManager();
-            IFlightsResourceManager proxyObj = (IFlightsResourceManager) UnicastRemoteObject.exportObject(obj, 0);
-
+            IResourceManager resourceManager = (IResourceManager) UnicastRemoteObject.exportObject(obj, 0);
             // Bind the remote object's stub in the registry
-            Registry registry = LocateRegistry.getRegistry(port);
-            registry.rebind(ServerConstants.FlightsPrefix, proxyObj);
+            Registry l_registry;
+            try {
+                l_registry = LocateRegistry.createRegistry(port);
+            } catch (RemoteException e) {
+                l_registry = LocateRegistry.getRegistry(port);
+            }
+            final Registry registry = l_registry;
+            registry.rebind(ServerConstants.FLIGHTS_PREFIX, resourceManager);
 
-            System.out.println("Flight server ready");
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                public void run() {
+                    try {
+                        registry.unbind(ServerConstants.FLIGHTS_PREFIX);
+                        System.out.println("'" + ServerConstants.FLIGHTS_PREFIX + "' resource manager unbound");
+                    }
+                    catch(Exception e) {
+                        System.err.println((char)27 + "[31;1mServer exception: " + (char)27 + "[0mUncaught exception");
+                        e.printStackTrace();
+                    }
+                }
+            });
+            System.out.println("'" + serverName + "' resource manager server ready and bound to '" + ServerConstants.FLIGHTS_PREFIX + "'");
+
+            System.out.println("Flights server ready");
         } catch (Exception e) {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
@@ -49,30 +69,5 @@ public class FlightsResourceManager extends ResourceManager implements IFlightsR
         if (System.getSecurityManager() == null) {
             System.setSecurityManager(new RMISecurityManager());
         }
-    }
-
-
-    public boolean addFlights(int id, String location, int numFlights, int price) throws RemoteException {
-        return addFlights(id, location, numFlights, price);
-    }
-
-    public boolean deleteFlights(int id, String location) throws RemoteException {
-        return deleteFlights(id, location);
-    }
-
-    public int queryFlights(int id, String location) throws RemoteException {
-        return queryFlights(id, location);
-    }
-
-    public int queryFlightsPrice(int id, String location) throws RemoteException {
-        return queryFlightsPrice(id, location);
-    }
-
-    public boolean reserveFlight(int id, int customerID, String location) throws RemoteException {
-        return reserveFlight(id, customerID, location);
-    }
-
-    public String getName() throws RemoteException {
-        return getName();
     }
 }

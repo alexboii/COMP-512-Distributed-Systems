@@ -14,10 +14,10 @@ public class RMIClient extends Client
 {
 	private static String s_serverHost = "localhost";
 	private static int s_serverPort = 1099;
-	private static String s_serverName = "Server";
+	private static String s_serverName = "Middleware_";
 
 	//TODO: REPLACE 'ALEX' WITH YOUR GROUP NUMBER TO COMPILE
-	private static String s_rmiPrefix = "group01_";
+	private static String s_rmiPrefix = "group01";
 
 	public static void main(String args[])
 	{	
@@ -71,7 +71,7 @@ public class RMIClient extends Client
 			while (true) {
 				try {
 					Registry registry = LocateRegistry.getRegistry(server, port);
-					m_resourceManager = (IResourceManager)registry.lookup(s_rmiPrefix + name);
+					m_resourceManager = (IResourceManager)registry.lookup(name + s_rmiPrefix);
 					System.out.println("Connected to '" + name + "' server [" + server + ":" + port + "/" + s_rmiPrefix + name + "]");
 					break;
 				}

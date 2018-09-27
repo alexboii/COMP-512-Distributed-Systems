@@ -8,11 +8,17 @@
         <outputRelativeToContentRoot value="true" />
         <module name="Cars" />
         <module name="Common" />
+        <module name="Flights" />
+        <module name="Middleware" />
+        <module name="Rooms" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="Cars" target="1.5" />
-      <module name="Common" target="1.5" />
+      <module name="Cars" target="1.8" />
+      <module name="Common" target="1.8" />
+      <module name="Flights" target="1.8" />
+      <module name="Middleware" target="1.8" />
+      <module name="Rooms" target="1.8" />
     </bytecodeTargetLevel>
   </component>
 </project>

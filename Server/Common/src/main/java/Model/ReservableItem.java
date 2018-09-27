@@ -67,6 +67,7 @@ public abstract class ReservableItem extends RMItem implements Serializable
 
     public abstract String getKey();
 
+    @Override
     public Object clone()
     {
         ReservableItem obj = (ReservableItem)super.clone();

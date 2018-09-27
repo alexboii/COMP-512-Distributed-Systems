@@ -1,5 +1,6 @@
 package cars;
 
+import RM.IResourceManager;
 import RM.ResourceManager;
 import Constants.ServerConstants;
 
@@ -12,7 +13,7 @@ import java.rmi.server.UnicastRemoteObject;
 /**
  * Created by alex on 9/25/18.
  */
-public class CarResourceManager extends ResourceManager implements ICarResourceManager {
+public class CarResourceManager extends ResourceManager {
 
     private static final String serverName = "Cars";
 
@@ -22,7 +23,7 @@ public class CarResourceManager extends ResourceManager implements ICarResourceM
 
     public static void main(String[] args) {
         // Figure out where server is running
-        int port = 1099;
+        int port = ServerConstants.CAR_SERVER_PORT;
 
         if (args.length == 1) {
             port = Integer.parseInt(args[0]);
@@ -34,11 +35,32 @@ public class CarResourceManager extends ResourceManager implements ICarResourceM
         try {
             // Create a new server object and dynamically generate the stub (client proxy)
             CarResourceManager obj = new CarResourceManager();
-            ICarResourceManager proxyObj = (ICarResourceManager) UnicastRemoteObject.exportObject(obj, 0);
+            IResourceManager resourceManager = (IResourceManager) UnicastRemoteObject.exportObject(obj, 0);
 
             // Bind the remote object's stub in the registry
-            Registry registry = LocateRegistry.getRegistry(port);
-            registry.rebind(ServerConstants.CarPrefix, proxyObj);
+            // Bind the remote object's stub in the registry
+            Registry l_registry;
+            try {
+                l_registry = LocateRegistry.createRegistry(port);
+            } catch (RemoteException e) {
+                l_registry = LocateRegistry.getRegistry(port);
+            }
+            final Registry registry = l_registry;
+            registry.rebind(ServerConstants.CAR_PREFIX, resourceManager);
+
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                public void run() {
+                    try {
+                        registry.unbind(ServerConstants.CAR_PREFIX);
+                        System.out.println("'" + ServerConstants.CAR_PREFIX + "' resource manager unbound");
+                    }
+                    catch(Exception e) {
+                        System.err.println((char)27 + "[31;1mServer exception: " + (char)27 + "[0mUncaught exception");
+                        e.printStackTrace();
+                    }
+                }
+            });
+            System.out.println("'" + serverName + "' resource manager server ready and bound to '" + ServerConstants.CAR_PREFIX + "'");
 
             System.out.println("Car server ready");
         } catch (Exception e) {
@@ -50,30 +72,5 @@ public class CarResourceManager extends ResourceManager implements ICarResourceM
         if (System.getSecurityManager() == null) {
             System.setSecurityManager(new RMISecurityManager());
         }
-    }
-
-
-    public boolean addCars(int id, String location, int numCars, int price) throws RemoteException {
-        return addCars(id, location, numCars, price);
-    }
-
-    public boolean deleteCars(int id, String location) throws RemoteException {
-        return deleteCars(id, location);
-    }
-
-    public int queryCars(int id, String location) throws RemoteException {
-        return queryCars(id, location);
-    }
-
-    public int queryCarsPrice(int id, String location) throws RemoteException {
-        return queryCarsPrice(id, location);
-    }
-
-    public boolean reserveCar(int id, int customerID, String location) throws RemoteException {
-        return reserveCar(id, customerID, location);
-    }
-
-    public String getName() throws RemoteException {
-        return getName();
     }
 }

@@ -71,6 +71,7 @@ public class Customer extends RMItem {
         return m_reservations;
     }
 
+    @Override
     public Object clone() {
         Customer obj = (Customer) super.clone();
         obj.m_ID = m_ID;

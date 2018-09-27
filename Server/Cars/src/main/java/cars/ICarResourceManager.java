@@ -1,12 +1,14 @@
 package cars;
 
+import RM.IResourceManager;
+
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
 /**
  * Created by alex on 9/25/18.
  */
-public interface ICarResourceManager extends Remote {
+public interface ICarResourceManager extends IResourceManager {
     public boolean addCars(int id, String location, int numCars, int price)
             throws RemoteException;
 

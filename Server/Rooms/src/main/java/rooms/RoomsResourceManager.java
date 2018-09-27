@@ -1,6 +1,7 @@
 package rooms;
 
 import Constants.ServerConstants;
+import RM.IResourceManager;
 import RM.ResourceManager;
 
 import java.rmi.RMISecurityManager;
@@ -12,7 +13,7 @@ import java.rmi.server.UnicastRemoteObject;
 /**
  * Created by alex on 9/25/18.
  */
-public class RoomsResourceManager extends ResourceManager implements IRoomsResourceManager {
+public class RoomsResourceManager extends ResourceManager {
     private static final String serverName = "Rooms";
 
     public RoomsResourceManager() {
@@ -21,7 +22,7 @@ public class RoomsResourceManager extends ResourceManager implements IRoomsResou
 
     public static void main(String[] args) {
         // Figure out where server is running
-        int port = 1099;
+        int port = ServerConstants.ROOMS_SERVER_PORT;
 
         if (args.length == 1) {
             port = Integer.parseInt(args[0]);
@@ -33,13 +34,33 @@ public class RoomsResourceManager extends ResourceManager implements IRoomsResou
         try {
             // Create a new server object and dynamically generate the stub (client proxy)
             RoomsResourceManager obj = new RoomsResourceManager();
-            IRoomsResourceManager proxyObj = (IRoomsResourceManager) UnicastRemoteObject.exportObject(obj, 0);
+            IResourceManager resourceManager = (IResourceManager) UnicastRemoteObject.exportObject(obj, 0);
 
             // Bind the remote object's stub in the registry
-            Registry registry = LocateRegistry.getRegistry(port);
-            registry.rebind(ServerConstants.RoomsPrefix, proxyObj);
+            Registry l_registry;
+            try {
+                l_registry = LocateRegistry.createRegistry(port);
+            } catch (RemoteException e) {
+                l_registry = LocateRegistry.getRegistry(port);
+            }
+            final Registry registry = l_registry;
+            registry.rebind(ServerConstants.ROOMS_PREFIX, resourceManager);
 
-            System.out.println("Room server ready");
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                public void run() {
+                    try {
+                        registry.unbind(ServerConstants.ROOMS_PREFIX);
+                        System.out.println("'" + ServerConstants.ROOMS_PREFIX + "' resource manager unbound");
+                    }
+                    catch(Exception e) {
+                        System.err.println((char)27 + "[31;1mServer exception: " + (char)27 + "[0mUncaught exception");
+                        e.printStackTrace();
+                    }
+                }
+            });
+            System.out.println("'" + serverName + "' resource manager server ready and bound to '" + ServerConstants.ROOMS_PREFIX + "'");
+
+            System.out.println("Rooms server ready");
         } catch (Exception e) {
             System.err.println("Server exception: " + e.toString());
             e.printStackTrace();
@@ -49,30 +70,5 @@ public class RoomsResourceManager extends ResourceManager implements IRoomsResou
         if (System.getSecurityManager() == null) {
             System.setSecurityManager(new RMISecurityManager());
         }
-    }
-
-
-    public boolean addRooms(int id, String location, int numRooms, int price) throws RemoteException {
-        return addRooms(id, location, numRooms, price);
-    }
-
-    public boolean deleteRooms(int id, String location) throws RemoteException {
-        return deleteRooms(id, location);
-    }
-
-    public int queryRooms(int id, String location) throws RemoteException {
-        return queryRooms(id, location);
-    }
-
-    public int queryRoomsPrice(int id, String location) throws RemoteException {
-        return queryRoomsPrice(id, location);
-    }
-
-    public boolean reserveRoom(int id, int customerID, String location) throws RemoteException {
-        return reserveRoom(id, customerID, location);
-    }
-
-    public String getName() throws RemoteException {
-        return getName();
     }
 }
