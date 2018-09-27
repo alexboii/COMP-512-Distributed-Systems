@@ -1,4 +1,4 @@
-package Client;
+package client;
 
 public enum Command {
 	Help("List all available commands", "[CommandName]"),
@@ -49,7 +49,7 @@ public enum Command {
 				return cmd;
 			}
 		}
-		throw new IllegalArgumentException("Command " + string + " not found");
+		throw new IllegalArgumentException("client.Command " + string + " not found");
 	}
 
 	public static String description()

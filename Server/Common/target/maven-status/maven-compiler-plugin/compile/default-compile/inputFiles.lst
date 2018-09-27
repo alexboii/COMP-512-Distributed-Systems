@@ -1,6 +1,6 @@
 /home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Model/Car.java
-/home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Model/ReservedItem.java
 /home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Model/ReservableItem.java
+/home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Model/ReservedItem.java
 /home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Model/Room.java
 /home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Constants/GeneralConstants.java
 /home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/RM/ResourceManager.java
@@ -9,5 +9,5 @@
 /home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Model/Flight.java
 /home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Constants/ServerConstants.java
 /home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Model/RMHashMap.java
-/home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Utilities/Trace.java
 /home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Model/RMItem.java
+/home/alex/Projects/COMP-512-Distributed-Systems/Server/Common/src/main/java/Utilities/Trace.java

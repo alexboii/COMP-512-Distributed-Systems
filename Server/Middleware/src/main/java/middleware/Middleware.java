@@ -12,7 +12,7 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Vector;
 
-public class Middleware extends ResourceManager {
+public class Middleware implements IResourceManager {
     private static final String serverName = "Middleware";
 
     public static void main(String[] args) {
@@ -28,8 +28,11 @@ public class Middleware extends ResourceManager {
         }
 
         try {
-           Middleware obj = new Middleware();
-	       	// Create a new server object and dynamically generate the stub (client proxy)
+            Middleware obj = new Middleware();
+            carsManager = connectServer(ServerConstants.CAR_SERVER_NAME, ServerConstants.CAR_SERVER_PORT, ServerConstants.CAR_PREFIX);
+            roomsManager = connectServer(ServerConstants.ROOMS_SERVER, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
+            flightsManager = connectServer(ServerConstants.FLIGHTS_SERVER_NAME, ServerConstants.FLIGHTS_SERVER_PORT, ServerConstants.FLIGHTS_PREFIX);
+            // Create a new server object and dynamically generate the stub (client proxy)
             IResourceManager resourceManager = (IResourceManager) UnicastRemoteObject.exportObject(obj, 0);
 
             // Bind the remote object's stub in the registry
@@ -62,10 +65,6 @@ public class Middleware extends ResourceManager {
             e.printStackTrace();
         }
 
-	carsManager = connectServer(ServerConstants.CAR_SERVER_NAME, ServerConstants.CAR_SERVER_PORT, ServerConstants.CAR_PREFIX);
-        roomsManager = connectServer(ServerConstants.ROOMS_SERVER, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
-        flightsManager = connectServer(ServerConstants.FLIGHTS_SERVER_NAME, ServerConstants.FLIGHTS_SERVER_PORT, ServerConstants.FLIGHTS_PREFIX);
-
         // Create and install a security manager
         if (System.getSecurityManager() == null) {
             System.setSecurityManager(new RMISecurityManager());
@@ -77,7 +76,6 @@ public class Middleware extends ResourceManager {
     public static IResourceManager roomsManager;
 
     public Middleware() {
-        super(serverName);
     }
 
     @Override
