@@ -1,16 +1,18 @@
-# comp512-project
+# Running Instructions
 
-To run the RMI resource manager:
+*Make sure to have `sshpass` installed and a McGill CS account prior to following these steps!*
+
+To compile all of the servers, distribute them into the respective machines (which you can choose by editing the ServerConstants file 
+in /Servers/Common/Constants/ServerConstants and in the script ./run_servers.sh), and run them, simply execute: 
 
 ```
-cd Server/
-./run_server.sh [<rmi_name>] # starts a single ResourceManager
-./run_servers.sh # convenience script for starting multiple resource managers
+sudo ./run_servers.sh <Your McGill CS Username> <Your McGill CS Password> 
 ```
 
 To run the RMI client:
 
 ```
-cd Client
-./run_client.sh [<server_hostname> [<server_rmi_name>]]
+sudo ./run_client.sh
 ```
+
+I suggest you run the client script from a McGill machine. 
