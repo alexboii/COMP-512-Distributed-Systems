@@ -1,5 +1,6 @@
 package client;
 
+import Constants.ServerConstants;
 import RM.IResourceManager;
 
 import java.rmi.registry.LocateRegistry;
@@ -9,9 +10,9 @@ import java.rmi.NotBoundException;
 
 public class RMIClient extends Client
 {
-	private static String s_serverHost = "lab2-37.cs.mcgill.ca";
-	private static int s_serverPort = 1088;
-	private static String s_serverName = "Middleware_";
+	private static String s_serverHost = ServerConstants.MIDDLEWARE_SERVER;
+	private static int s_serverPort = ServerConstants.MIDDLEWARE_PORT;
+	private static String s_serverName = ServerConstants.MIDDLEWARE_PREFIX;
 
 	//TODO: REPLACE 'ALEX' WITH YOUR GROUP NUMBER TO COMPILE
 	private static String s_rmiPrefix = "group01";
@@ -69,7 +70,7 @@ public class RMIClient extends Client
 				try {
 					Registry registry = LocateRegistry.getRegistry(server, port);
 					System.out.println("registry located");
-					m_resourceManager = (IResourceManager) registry.lookup("Middleware_group01");
+					m_resourceManager = (IResourceManager) registry.lookup(name);
 					System.out.println("Connected to '" + name + "' server [" + server + ":" + port + "/" + s_rmiPrefix + name + "]");
 					break;
 				}
