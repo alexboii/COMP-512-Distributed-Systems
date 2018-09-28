@@ -15,7 +15,8 @@ COMMON_SERVER="mimi.cs.mcgill.ca"
 CARS_SERVER="lab2-17.cs.mcgill.ca"
 FLIGHTS_SERVER="lab2-24.cs.mcgill.ca"
 ROOMS_SERVER="lab2-35.cs.mcgill.ca"
-ENTITIES_SERVERS="$CARS_SERVER $FLIGHTS_SERVER $ROOMS_SERVER"
+MIDDLEWARE_SERVER="lab2-37.cs.mcgill.ca"
+ENTITIES_SERVERS="$CARS_SERVER $FLIGHTS_SERVER $ROOMS_SERVER $MIDDLEWARE_SERVER"
 
 #declare entities
 CARS="Cars"
@@ -46,11 +47,15 @@ MIDDLEWARE_JAR_LOCATION="$MIDDLEWARE_DIR$JAR_LOCATION$JAR_MIDDLEWARE"
 JAR_DIRS="$CAR_JAR_LOCATION $FLIGHTS_JAR_LOCATION $ROOMS_JAR_LOCATION $MIDDLEWARE_JAR_LOCATION"
 
 #commands
-REGISTRY_COMMAND="rmiregistry -J-Djava.rmi.server.useCodebaseOnly=false 1099 &"
+REGISTRY_COMMAND="rmiregistry -J-Djava.rmi.server.useCodebaseOnly=false"
 CARS_COMMAND="java -Djava.security.policy=java.policy -Djava.rmi.server.codebase=file:./$JAR_CARS -jar $JAR_CARS &"
 FLIGHTS_COMMAND="java -Djava.security.policy=java.policy -Djava.rmi.server.codebase=file:./$JAR_FLIGHTS -jar $JAR_FLIGHTS &"
 ROOMS_COMMAND="java -Djava.security.policy=java.policy -Djava.rmi.server.codebase=file:./$JAR_ROOMS -jar $JAR_ROOMS &"
+MIDDLEWARE_COMMAND="java -Djava.security.policy=java.policy -Djava.rmi.server.codebase=file:./$JAR_MIDDLEWARE -jar $JAR_MIDDLEWARE &"
 
+#ports
+REGULAR_PORT="1099"
+MIDDLEWARE_CLIENT_PORT="1088"
 
 echo COMPILATION STAGE 
 
@@ -85,8 +90,11 @@ sshpass -p $password scp -o StrictHostKeyChecking=no "$ROOT_DIR/java.policy" "$u
 
 #echo INITIATE REGISTRIES FOR EVERY SERVER 
 #for ENTITY_SERVER in ${ENTITIES_SERVERS}; do
-#	sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ENTITY_SERVER" "$REGISTRY_COMMAND" 
+#	sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ENTITY_SERVER" "$REGISTRY_COMMAND $REGULAR_PORT &"
 #done
+
+#initiate exclusive registry on another port for middleware server
+sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$MIDDLEWARE_SERVER" "$REGISTRY_COMMAND $MIDDLEWARE_PORT &"
 
 #run the different servers on different machines
 
@@ -99,7 +107,8 @@ echo $FLIGHTS_COMMAND | sshpass -p $password ssh -o StrictHostKeyChecking=no "$u
 echo RUNNING ROOMS SERVER
 echo $ROOMS_COMMAND | sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ROOMS_SERVER" "cat > ~/run_rooms.sh; chmod 777 ~/run_rooms.sh; nohup ./run_rooms.sh > /dev/null 2>&1 &"
 
-
+echo RUNNING MIDDLEWARE SERVER
+echo $MIDDLEWARE_COMMAND | sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$MIDDLEWARE_SERVER" "cat > ~/run_middleware.sh; chmod 777 ~/run_middleware.sh; nohup ./run_middleware.sh > /dev/null 2>&1 &"
 
 
 
