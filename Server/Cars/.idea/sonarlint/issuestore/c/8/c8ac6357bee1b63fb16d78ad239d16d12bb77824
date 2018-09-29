@@ -1,0 +1,11 @@
+
+Psquid:S2864"4Iterate over the "entrySet" instead of the "keySet".(±ÉîÃ8Š½Àœá,
+[squid:S1161":Add the "@Override" annotation above this method signature(ßÔü²şÿÿÿÿ8Š½Àœá,
+Y
+squid:S106"9Replace this use of System.out or System.err by a logger.(šûã‡şÿÿÿÿ8Š½Àœá,
+msquid:S00120"WRename this package name to match the regular expression '^[a-z]+(\.[a-z][a-z0-9]*)*$'.(á–Ì“
+8squid:S1643"Use a StringBuilder instead.(Ÿ‹ÂÓ8Š½Àœá,
+tsquid:S2975"SRemove this "clone" implementation; use a copy constructor or copy factory instead.(¯ÔÚ“ùÿÿÿÿ8´Îá,
+Psquid:S2864"4Iterate over the "entrySet" instead of the "keySet".(±ÉîÃ8´Îá,
+isquid:S1182"HUse super.clone() to create and seed the cloned instance to be returned.(¯ÔÚ“ùÿÿÿÿ8´Îá,
+[squid:S1161":Add the "@Override" annotation above this method signature(¯ÔÚ“ùÿÿÿÿ8´Îá,

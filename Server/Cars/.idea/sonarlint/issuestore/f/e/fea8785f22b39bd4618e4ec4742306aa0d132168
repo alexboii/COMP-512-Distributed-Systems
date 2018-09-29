@@ -1,0 +1,10 @@
+
+Y
+squid:S106"9Replace this use of System.out or System.err by a logger.(ôŒÇ´ÿÿÿÿÿ8£‰’á,
+T
+squid:S106"9Replace this use of System.out or System.err by a logger.(şö“˜8£‰’á,
+|squid:S00115"ZRename this constant name to match the regular expression '^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'.(øŞ¦öıÿÿÿÿ8£‰’á,
+Dsquid:S1148"#Use a logger to log this exception.(€ÉÔ…ıÿÿÿÿ8£‰’á,
+T
+squid:S106"9Replace this use of System.out or System.err by a logger.(ËÁãø8£‰’á,
+lsquid:CallToDeprecatedMethod":Remove this use of "RMISecurityManager"; it is deprecated.(éŸÉÖşÿÿÿÿ8£‰’á,

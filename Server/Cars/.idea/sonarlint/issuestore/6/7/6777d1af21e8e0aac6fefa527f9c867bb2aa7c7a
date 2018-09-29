@@ -1,0 +1,19 @@
+
+msquid:S1192"QDefine a constant instead of duplicating this literal "RM::reserveItem(" 5 times.(­·“‹8´«¾œá,
+T
+squid:S106"9Replace this use of System.out or System.err by a logger.(Ö×˜8´«¾œá,
+ksquid:S1192"ODefine a constant instead of duplicating this literal "RM::addFlight(" 3 times.(¨šÙ¶8´«¾œá,
+psquid:S1192"TDefine a constant instead of duplicating this literal "RM::deleteCustomer(" 5 times.(œø§œ8´«¾œá,
+esquid:S1192"IDefine a constant instead of duplicating this literal ", count=" 4 times.(ê°´é8´«¾œá,
+ksquid:S1192"JDefine a constant instead of duplicating this literal ") called" 11 times.(²¬òüÿÿÿÿ8´«¾œá,
+ssquid:S00116"QRename this field "m_name" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(‘Ò»ıÿÿÿÿ8´«¾œá,
+isquid:S1192"NDefine a constant instead of duplicating this literal "RM::addRooms(" 3 times.(ˆêùz8´«¾œá,
+ssquid:S1192"WDefine a constant instead of duplicating this literal "RM::queryCustomerInfo(" 3 times.(ó‰ïè8´«¾œá,
+msquid:S1192"QDefine a constant instead of duplicating this literal "RM::newCustomer(" 4 times.(·¦8´«¾œá,
+ksquid:S1192"JDefine a constant instead of duplicating this literal ", price=$" 6 times.(×é£«ùÿÿÿÿ8´«¾œá,
+nsquid:S1192"MDefine a constant instead of duplicating this literal "RM::addCars(" 3 times.(­‚¶¸üÿÿÿÿ8´«¾œá,
+ssquid:S00116"QRename this field "m_data" to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(µáõÙøÿÿÿÿ8´«¾œá,
+†squid:S1149"eReplace the synchronized class "Vector" by an unsynchronized one such as "ArrayList" or "LinkedList".(×øÄ²ÿÿÿÿÿ8´«¾œá,
+qsquid:S1192"PDefine a constant instead of duplicating this literal "RM::deleteItem(" 4 times.(²¬òüÿÿÿÿ8´«¾œá,
+msquid:S00120"WRename this package name to match the regular expression '^[a-z]+(\.[a-z][a-z0-9]*)*$'.(ƒ›¼¬
+nsquid:S00117"QRename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'.(ÏÅÆ8´«¾œá,
