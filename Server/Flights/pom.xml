@@ -7,6 +7,14 @@
     <groupId>Flight</groupId>
     <artifactId>Flight</artifactId>
     <version>1.0-SNAPSHOT</version>
+
+    <parent>
+        <groupId>COMP-512-DistributedSystems</groupId>
+        <artifactId>COMP-512-DistributedSystems</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../../</relativePath>
+    </parent>
+
     <dependencies>
         <dependency>
             <groupId>Common</groupId>

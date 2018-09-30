@@ -1,4 +1,5 @@
+cars/CarServer$1.class
+cars/CarServer.class
 cars/Model/Car.class
-cars/CarResourceManager$1.class
-cars/ICarResourceManager.class
-cars/CarResourceManager.class
+cars/CarBootstrap.class
+cars/TestClient.class
