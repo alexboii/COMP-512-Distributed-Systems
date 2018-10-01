@@ -39,7 +39,6 @@ public class Middleware implements IResourceManager {
         }
 
         try {
-
             carServer = new Socket(InetAddress.getByName(ServerConstants.CAR_SERVER_NAME), ServerConstants.CAR_SERVER_PORT);
             System.out.println("Connected to Car server at " + ServerConstants.CAR_SERVER_NAME + ":" + ServerConstants.CAR_SERVER_PORT);
             carServerWriter = new OutputStreamWriter(carServer.getOutputStream(), "UTF-8");
