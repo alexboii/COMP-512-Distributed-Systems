@@ -2,8 +2,11 @@ package middleware;
 
 import Constants.ServerConstants;
 import RM.IResourceManager;
-import RM.ResourceManager;
+import org.json.JSONObject;
 
+import java.io.*;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.rmi.NotBoundException;
 import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
@@ -12,8 +15,16 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Vector;
 
+import static Constants.GeneralConstants.*;
+
 public class Middleware implements IResourceManager {
     private static final String serverName = "Middleware";
+    private static Socket carServer;
+    private static OutputStreamWriter carServerWriter;
+    private static BufferedReader carServerReader;
+
+    public static IResourceManager flightsManager;
+    public static IResourceManager roomsManager;
 
     public static void main(String[] args) {
 
@@ -28,14 +39,17 @@ public class Middleware implements IResourceManager {
         }
 
         try {
+            carServer = new Socket(InetAddress.getByName(ServerConstants.CAR_SERVER_NAME), ServerConstants.CAR_SERVER_PORT);
+            System.out.println("Connected to Car server at " + ServerConstants.CAR_SERVER_NAME + ":" + ServerConstants.CAR_SERVER_PORT);
+            carServerWriter = new OutputStreamWriter(carServer.getOutputStream(), "UTF-8");
+            carServerReader = new BufferedReader(new InputStreamReader(carServer.getInputStream(), "UTF-8"));
+
             Middleware obj = new Middleware();
-            carsManager = connectServer(ServerConstants.CAR_SERVER_NAME, ServerConstants.CAR_SERVER_PORT, ServerConstants.CAR_PREFIX);
             roomsManager = connectServer(ServerConstants.ROOMS_SERVER, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
             flightsManager = connectServer(ServerConstants.FLIGHTS_SERVER_NAME, ServerConstants.FLIGHTS_SERVER_PORT, ServerConstants.FLIGHTS_PREFIX);
             // Create a new server object and dynamically generate the stub (client proxy)
             IResourceManager resourceManager = (IResourceManager) UnicastRemoteObject.exportObject(obj, 0);
 
-            // Bind the remote object's stub in the registry
             // Bind the remote object's stub in the registry
             Registry l_registry;
             try {
@@ -51,6 +65,9 @@ public class Middleware implements IResourceManager {
                     try {
                         registry.unbind(ServerConstants.MIDDLEWARE_PREFIX);
                         System.out.println("'" + ServerConstants.MIDDLEWARE_PREFIX + "' resource manager unbound");
+                        carServer.close();
+                        carServerReader.close();
+                        carServerWriter.close();
                     } catch (Exception e) {
                         System.err.println((char) 27 + "[31;1mServer exception: " + (char) 27 + "[0mUncaught exception");
                         e.printStackTrace();
@@ -71,11 +88,22 @@ public class Middleware implements IResourceManager {
         }
     }
 
-    public static IResourceManager carsManager;
-    public static IResourceManager flightsManager;
-    public static IResourceManager roomsManager;
-
     public Middleware() {
+    }
+
+    private JSONObject sendAndReceive(JSONObject request) {
+        try {
+            carServerWriter.write(request.toString() + "\n");
+            carServerWriter.flush();
+
+            String line = carServerReader.readLine();
+            System.out.println("Reply from server: " + line + "\n");
+            JSONObject reply = new JSONObject(line);
+            return reply;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     @Override
@@ -85,7 +113,18 @@ public class Middleware implements IResourceManager {
 
     @Override
     public boolean addCars(int id, String location, int numCars, int price) throws RemoteException {
-        return carsManager.addCars(id, location, numCars, price);
+        JSONObject request = new JSONObject();
+        request.put(ACTION, ADD_CARS);
+        request.put(CAR_XID, id);
+        request.put(CAR_LOCATION, location);
+        request.put(CAR_COUNT, numCars);
+        request.put(CAR_PRICE, price);
+
+        JSONObject reply = sendAndReceive(request);
+        if(reply == null) {
+            return false;
+        }
+        return reply.getBoolean(RESULT);
     }
 
     @Override
@@ -110,7 +149,16 @@ public class Middleware implements IResourceManager {
 
     @Override
     public boolean deleteCars(int id, String location) throws RemoteException {
-        return carsManager.deleteCars(id, location);
+        JSONObject request = new JSONObject();
+        request.put(ACTION, DELETE_CARS);
+        request.put(CAR_XID, id);
+        request.put(CAR_LOCATION, location);
+
+        JSONObject reply = sendAndReceive(request);
+        if(reply == null) {
+            return false;
+        }
+        return reply.getBoolean(RESULT);
     }
 
     @Override
@@ -130,7 +178,16 @@ public class Middleware implements IResourceManager {
 
     @Override
     public int queryCars(int id, String location) throws RemoteException {
-        return carsManager.queryCars(id, location);
+        JSONObject request = new JSONObject();
+        request.put(ACTION, QUERY_CARS);
+        request.put(CAR_XID, id);
+        request.put(CAR_LOCATION, location);
+
+        JSONObject reply = sendAndReceive(request);
+        if(reply == null) {
+            return 0;
+        }
+        return reply.getInt(RESULT);
     }
 
     @Override
@@ -150,7 +207,16 @@ public class Middleware implements IResourceManager {
 
     @Override
     public int queryCarsPrice(int id, String location) throws RemoteException {
-        return carsManager.queryCarsPrice(id, location);
+        JSONObject request = new JSONObject();
+        request.put(ACTION, QUERY_CARS_PRICE);
+        request.put(CAR_XID, id);
+        request.put(CAR_LOCATION, location);
+
+        JSONObject reply = sendAndReceive(request);
+        if(reply == null) {
+            return 0;
+        }
+        return reply.getInt(RESULT);
     }
 
     @Override
@@ -165,7 +231,17 @@ public class Middleware implements IResourceManager {
 
     @Override
     public boolean reserveCar(int id, int customerID, String location) throws RemoteException {
-        return carsManager.reserveCar(id, customerID, location);
+        JSONObject request = new JSONObject();
+        request.put(ACTION, RESERVE_CARS);
+        request.put(CAR_XID, id);
+        request.put(CAR_CUSTOMER_ID, customerID);
+        request.put(CAR_LOCATION, location);
+
+        JSONObject reply = sendAndReceive(request);
+        if(reply == null) {
+            return false;
+        }
+        return reply.getBoolean(RESULT);
     }
 
     @Override
