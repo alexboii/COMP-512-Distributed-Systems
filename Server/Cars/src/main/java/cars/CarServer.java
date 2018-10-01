@@ -37,9 +37,10 @@ public class CarServer extends ResourceManager {
                     @Override
                     public void run() {
                         BufferedReader reader = null;
+                        OutputStreamWriter writer = null;
                         try{
                             reader = new BufferedReader(new InputStreamReader(client.getInputStream(), "UTF-8"));
-                            OutputStreamWriter writer = new OutputStreamWriter(client.getOutputStream(), "UTF-8");
+                            writer = new OutputStreamWriter(client.getOutputStream(), "UTF-8");
 
                             String line = null;
                             while ((line = reader.readLine()) != null ) {
@@ -51,6 +52,7 @@ public class CarServer extends ResourceManager {
                         } finally {
                             try {
                                 reader.close();
+                                writer.close();
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }

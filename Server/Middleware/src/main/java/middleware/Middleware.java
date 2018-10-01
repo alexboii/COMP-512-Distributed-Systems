@@ -4,10 +4,7 @@ import Constants.ServerConstants;
 import RM.IResourceManager;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.rmi.NotBoundException;
@@ -44,6 +41,7 @@ public class Middleware implements IResourceManager {
         try {
 
             carServer = new Socket(InetAddress.getByName(ServerConstants.CAR_SERVER_NAME), ServerConstants.CAR_SERVER_PORT);
+            System.out.println("Connected to Car server at " + ServerConstants.CAR_SERVER_NAME + ":" + ServerConstants.CAR_SERVER_PORT);
             carServerWriter = new OutputStreamWriter(carServer.getOutputStream(), "UTF-8");
             carServerReader = new BufferedReader(new InputStreamReader(carServer.getInputStream(), "UTF-8"));
 
@@ -68,6 +66,9 @@ public class Middleware implements IResourceManager {
                     try {
                         registry.unbind(ServerConstants.MIDDLEWARE_PREFIX);
                         System.out.println("'" + ServerConstants.MIDDLEWARE_PREFIX + "' resource manager unbound");
+                        carServer.close();
+                        carServerReader.close();
+                        carServerWriter.close();
                     } catch (Exception e) {
                         System.err.println((char) 27 + "[31;1mServer exception: " + (char) 27 + "[0mUncaught exception");
                         e.printStackTrace();
@@ -96,8 +97,9 @@ public class Middleware implements IResourceManager {
             carServerWriter.write(request.toString() + "\n");
             carServerWriter.flush();
 
-            JSONObject reply = new JSONObject(carServerReader.readLine());
-            System.out.println("Reply from server: " + reply);
+            String line = carServerReader.readLine();
+            System.out.println("Reply from server: " + line + "\n");
+            JSONObject reply = new JSONObject(line);
             return reply;
         } catch (IOException e) {
             e.printStackTrace();

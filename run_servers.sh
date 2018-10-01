@@ -13,7 +13,7 @@ POM_FILE_NAME="pom.xml"
 #servers
 COMMON_SERVER="mimi.cs.mcgill.ca"
 CARS_SERVER="lab2-17.cs.mcgill.ca"
-FLIGHTS_SERVER="lab2-32.cs.mcgill.ca"
+FLIGHTS_SERVER="lab2-11.cs.mcgill.ca"
 ROOMS_SERVER="lab2-35.cs.mcgill.ca"
 MIDDLEWARE_SERVER="lab2-37.cs.mcgill.ca"
 ENTITIES_SERVERS="$CARS_SERVER $FLIGHTS_SERVER $ROOMS_SERVER $MIDDLEWARE_SERVER"
@@ -59,13 +59,7 @@ MIDDLEWARE_CLIENT_PORT="1088"
 
 echo COMPILATION STAGE 
 
-#first compile the common project with its own command 
-mvn -f "$COMMON_DIR$POM_FILE_NAME" clean install 
-
-#create the jar for the rest of the servers 
-for SERVER_DIR in ${MVN_DIRS}; do
-	mvn -f "$SERVER_DIR$POM_FILE_NAME" clean compile assembly:single
-done
+mvn clean install
 
 echo COPYING FILES TO MCGILL SERVER
 
