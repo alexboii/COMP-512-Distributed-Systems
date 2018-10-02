@@ -114,7 +114,7 @@ public class Middleware implements IResourceManager {
 
     @Override
     public boolean addFlight(int id, int flightNum, int flightSeats, int flightPrice) throws RemoteException {
-        return customerManager.addFlight(id, flightNum, flightSeats, flightPrice) && flightsManager.addFlight(id, flightNum, flightSeats, flightPrice);
+        return flightsManager.addFlight(id, flightNum, flightSeats, flightPrice);
     }
 
     @Override
@@ -158,7 +158,6 @@ public class Middleware implements IResourceManager {
         request.put(ACTION, NEW_CUSTOMER_ID);
         request.put(CUSTOMER_XID, id);
         request.put(CUSTOMER_ID, cid);
-
 
         JSONObject reply = sendAndReceive(request);
         if(reply == null) {

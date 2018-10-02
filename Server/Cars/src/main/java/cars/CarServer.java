@@ -114,6 +114,7 @@ public class CarServer extends ResourceManager {
 
             case NEW_CUSTOMER:
                 xid = request.getInt(CUSTOMER_XID);
+
                 res = newCustomer(xid);
 
                 sendReply(writer, res);
@@ -122,6 +123,7 @@ public class CarServer extends ResourceManager {
             case NEW_CUSTOMER_ID:
                 xid = request.getInt(CUSTOMER_XID);
                 customerId = request.getInt(CUSTOMER_ID);
+
                 result = newCustomer(xid, customerId);
 
                 sendReply(writer, result);
