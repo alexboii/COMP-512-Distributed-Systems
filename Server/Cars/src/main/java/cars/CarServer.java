@@ -22,7 +22,7 @@ public class CarServer extends ResourceManager {
         super(serverName);
     }
 
-    void start (int port) {
+    void start(int port) {
         try {
             ServerSocket server = createServerSocket(ServerConstants.CAR_SERVER_NAME, port);
 
@@ -38,12 +38,12 @@ public class CarServer extends ResourceManager {
                     public void run() {
                         BufferedReader reader = null;
                         OutputStreamWriter writer = null;
-                        try{
+                        try {
                             reader = new BufferedReader(new InputStreamReader(client.getInputStream(), "UTF-8"));
                             writer = new OutputStreamWriter(client.getOutputStream(), "UTF-8");
 
                             String line = null;
-                            while ((line = reader.readLine()) != null ) {
+                            while ((line = reader.readLine()) != null) {
                                 System.out.println("Received: " + line);
                                 handle(new JSONObject(line), writer);
                             }
@@ -67,7 +67,7 @@ public class CarServer extends ResourceManager {
 
     private void handle(JSONObject request, OutputStreamWriter writer) throws IOException {
 
-        switch((String)request.get(ACTION)) {
+        switch ((String) request.get(ACTION)) {
 
             case ADD_CARS:
                 int xid = request.getInt(CAR_XID);
@@ -111,7 +111,33 @@ public class CarServer extends ResourceManager {
                 result = reserveCar(xid, customerId, location);
                 sendReply(writer, result);
                 break;
+
+            case NEW_CUSTOMER:
+                xid = request.getInt(CUSTOMER_XID);
+
+                res = newCustomer(xid);
+
+                sendReply(writer, res);
+                break;
+
+            case NEW_CUSTOMER_ID:
+                xid = request.getInt(CUSTOMER_XID);
+                customerId = request.getInt(CUSTOMER_ID);
+
+                result = newCustomer(xid, customerId);
+
+                sendReply(writer, result);
+                break;
+
+            case DELETE_CUSTOMER:
+                xid = request.getInt(CUSTOMER_XID);
+                customerId = request.getInt(CUSTOMER_ID);
+                result = deleteCustomer(xid, customerId);
+
+                sendReply(writer, result);
+                break;
         }
+
 
     }
 

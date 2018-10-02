@@ -81,11 +81,10 @@ sshpass -p $password scp -o StrictHostKeyChecking=no "$ROOT_DIR/java.policy" "$u
 #remove policy file from local 
 #rm -rf "$ROOT_DIR/java.policy"
 
-
-#echo INITIATE REGISTRIES FOR EVERY SERVER 
-#for ENTITY_SERVER in ${ENTITIES_SERVERS}; do
-#	sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ENTITY_SERVER" "$REGISTRY_COMMAND $REGULAR_PORT &"
-#done
+# kill all currently active processes in these remote machines
+for ENTITY_SERVER in ${ENTITIES_SERVERS}; do
+    sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ENTITY_SERVER" "pkill -u $username"
+done
 
 #initiate exclusive registry on another port for middleware server
 sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$MIDDLEWARE_SERVER" "$REGISTRY_COMMAND $MIDDLEWARE_PORT &"
