@@ -91,7 +91,7 @@ public class Middleware implements IResourceManager {
     public CustomerResourceManager customerManager;
 
     public Middleware() {
-        carsManager = connectServer(ServerConstants.CAR_SERVER_NAME, ServerConstants.CAR_SERVER_PORT, ServerConstants.CAR_PREFIX);
+//        carsManager = connectServer(ServerConstants.CAR_SERVER_NAME, ServerConstants.CAR_SERVER_PORT, ServerConstants.CAR_PREFIX);
         roomsManager = connectServer(ServerConstants.ROOMS_SERVER, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
         flightsManager = connectServer(ServerConstants.FLIGHTS_SERVER_NAME, ServerConstants.FLIGHTS_SERVER_PORT, ServerConstants.FLIGHTS_PREFIX);
         customerManager = new CustomerResourceManager();
@@ -140,12 +140,32 @@ public class Middleware implements IResourceManager {
 
     @Override
     public int newCustomer(int id) throws RemoteException {
-        return customerManager.newCustomer(id) == 1 && flightsManager.newCustomer(id) == 1 && roomsManager.newCustomer(id) == 1 && carsManager.newCustomer(id) == 1 ? 1 : 0;
+        JSONObject request = new JSONObject();
+        request.put(ACTION, NEW_CUSTOMER);
+        request.put(CUSTOMER_XID, id);
+
+        JSONObject reply = sendAndReceive(request);
+        if(reply == null) {
+            return 0;
+        }
+
+        return customerManager.newCustomer(id) == 1 && flightsManager.newCustomer(id) == 1 && roomsManager.newCustomer(id) == 1 && reply.getInt(RESULT) == 1 ? 1 : 0;
     }
 
     @Override
     public boolean newCustomer(int id, int cid) throws RemoteException {
-        return customerManager.newCustomer(id, cid) && flightsManager.newCustomer(id, cid) && roomsManager.newCustomer(id, cid) && carsManager.newCustomer(id, cid);
+        JSONObject request = new JSONObject();
+        request.put(ACTION, NEW_CUSTOMER_ID);
+        request.put(CUSTOMER_XID, id);
+        request.put(CUSTOMER_ID, cid);
+
+
+        JSONObject reply = sendAndReceive(request);
+        if(reply == null) {
+            return false;
+        }
+
+        return customerManager.newCustomer(id, cid) && flightsManager.newCustomer(id, cid) && roomsManager.newCustomer(id, cid) && reply.getBoolean(RESULT);
     }
 
     @Override
@@ -174,7 +194,17 @@ public class Middleware implements IResourceManager {
 
     @Override
     public boolean deleteCustomer(int id, int customerID) throws RemoteException {
-        return customerManager.deleteCustomer(id, customerID) && flightsManager.deleteCustomer(id, customerID) && roomsManager.deleteCustomer(id, customerID) && carsManager.deleteCustomer(id, customerID);
+        JSONObject request = new JSONObject();
+        request.put(ACTION, DELETE_CUSTOMER);
+        request.put(CUSTOMER_XID, id);
+        request.put(CUSTOMER_ID, customerID);
+
+        JSONObject reply = sendAndReceive(request);
+        if(reply == null) {
+            return false;
+        }
+
+        return customerManager.deleteCustomer(id, customerID) && flightsManager.deleteCustomer(id, customerID) && roomsManager.deleteCustomer(id, customerID) && reply.getBoolean(RESULT);
     }
 
     @Override

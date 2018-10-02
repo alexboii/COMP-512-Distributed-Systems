@@ -82,9 +82,9 @@ sshpass -p $password scp -o StrictHostKeyChecking=no "$ROOT_DIR/java.policy" "$u
 #rm -rf "$ROOT_DIR/java.policy"
 
 # kill all currently active processes in these remote machines
-#for ENTITY_SERVER in ${ENTITIES_SERVERS}; do
-#	sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ENTITY_SERVER" "pkill -u $username"
-#done
+for ENTITY_SERVER in ${ENTITIES_SERVERS}; do
+    sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ENTITY_SERVER" "pkill -u $username"
+done
 
 #initiate exclusive registry on another port for middleware server
 sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$MIDDLEWARE_SERVER" "$REGISTRY_COMMAND $MIDDLEWARE_PORT &"

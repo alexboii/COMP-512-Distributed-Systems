@@ -22,4 +22,11 @@ public class GeneralConstants {
     public static final String CAR_PRICE = "price";
     public static final String CAR_CUSTOMER_ID = "customerId";
 
+    //CUSTOMER
+    public static final String CUSTOMER_XID = "xid";
+    public static final String CUSTOMER_ID = "customerId";
+    public static final String NEW_CUSTOMER = "AddCustomer";
+    public static final String NEW_CUSTOMER_ID = "AddCustomerID";
+    public static final String DELETE_CUSTOMER = "DeleteCustomer";
+
 }
