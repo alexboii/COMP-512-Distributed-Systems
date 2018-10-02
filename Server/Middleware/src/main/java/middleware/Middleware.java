@@ -3,6 +3,7 @@ package middleware;
 import Constants.ServerConstants;
 import RM.IResourceManager;
 import RM.ResourceManager;
+import customer.CustomerResourceManager;
 
 import java.rmi.NotBoundException;
 import java.rmi.RMISecurityManager;
@@ -12,7 +13,7 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Vector;
 
-public class Middleware implements IResourceManager {
+public class Middleware extends ResourceManager {
     private static final String serverName = "Middleware";
 
     public static void main(String[] args) {
@@ -29,9 +30,7 @@ public class Middleware implements IResourceManager {
 
         try {
             Middleware obj = new Middleware();
-            carsManager = connectServer(ServerConstants.CAR_SERVER_NAME, ServerConstants.CAR_SERVER_PORT, ServerConstants.CAR_PREFIX);
-            roomsManager = connectServer(ServerConstants.ROOMS_SERVER, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
-            flightsManager = connectServer(ServerConstants.FLIGHTS_SERVER_NAME, ServerConstants.FLIGHTS_SERVER_PORT, ServerConstants.FLIGHTS_PREFIX);
+
             // Create a new server object and dynamically generate the stub (client proxy)
             IResourceManager resourceManager = (IResourceManager) UnicastRemoteObject.exportObject(obj, 0);
 
@@ -71,16 +70,22 @@ public class Middleware implements IResourceManager {
         }
     }
 
-    public static IResourceManager carsManager;
-    public static IResourceManager flightsManager;
-    public static IResourceManager roomsManager;
+    public IResourceManager carsManager;
+    public IResourceManager flightsManager;
+    public IResourceManager roomsManager;
+    public CustomerResourceManager customerManager;
 
     public Middleware() {
+        super("middleware");
+        carsManager = connectServer(ServerConstants.CAR_SERVER_NAME, ServerConstants.CAR_SERVER_PORT, ServerConstants.CAR_PREFIX);
+        roomsManager = connectServer(ServerConstants.ROOMS_SERVER, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
+        flightsManager = connectServer(ServerConstants.FLIGHTS_SERVER_NAME, ServerConstants.FLIGHTS_SERVER_PORT, ServerConstants.FLIGHTS_PREFIX);
+        customerManager = new CustomerResourceManager();
     }
 
     @Override
     public boolean addFlight(int id, int flightNum, int flightSeats, int flightPrice) throws RemoteException {
-        return flightsManager.addFlight(id, flightNum, flightSeats, flightPrice);
+        return customerManager.addFlight(id, flightNum, flightSeats, flightPrice) && flightsManager.addFlight(id, flightNum, flightSeats, flightPrice);
     }
 
     @Override
@@ -95,12 +100,12 @@ public class Middleware implements IResourceManager {
 
     @Override
     public int newCustomer(int id) throws RemoteException {
-        return 0;
+        return customerManager.newCustomer(id) == 1 && flightsManager.newCustomer(id) == 1 && roomsManager.newCustomer(id) == 1 && carsManager.newCustomer(id) == 1 ? 1 : 0;
     }
 
     @Override
     public boolean newCustomer(int id, int cid) throws RemoteException {
-        return false;
+        return customerManager.newCustomer(id, cid) && flightsManager.newCustomer(id, cid) && roomsManager.newCustomer(id, cid) && carsManager.newCustomer(id, cid);
     }
 
     @Override
@@ -120,7 +125,7 @@ public class Middleware implements IResourceManager {
 
     @Override
     public boolean deleteCustomer(int id, int customerID) throws RemoteException {
-        return false;
+        return customerManager.deleteCustomer(id, customerID) && flightsManager.deleteCustomer(id, customerID) && roomsManager.deleteCustomer(id, customerID) && carsManager.deleteCustomer(id, customerID);
     }
 
     @Override
@@ -140,7 +145,7 @@ public class Middleware implements IResourceManager {
 
     @Override
     public String queryCustomerInfo(int id, int customerID) throws RemoteException {
-        return null;
+        return customerManager.queryCustomerInfo(id, customerID);
     }
 
     @Override
@@ -160,22 +165,63 @@ public class Middleware implements IResourceManager {
 
     @Override
     public boolean reserveFlight(int id, int customerID, int flightNumber) throws RemoteException {
-        return flightsManager.reserveFlight(id, customerID, flightNumber);
+        if (!flightsManager.reserveFlight(id, customerID, flightNumber)) {
+            return false;
+        }
+
+        int price = queryFlightPrice(id, flightNumber);
+
+        return customerManager.reserveFlight(id, customerID, flightNumber, price);
     }
 
     @Override
     public boolean reserveCar(int id, int customerID, String location) throws RemoteException {
-        return carsManager.reserveCar(id, customerID, location);
+        if (!carsManager.reserveCar(id, customerID, location)) {
+            return false;
+        }
+
+        int price = queryCarsPrice(id, location);
+
+        return customerManager.reserveCar(id, customerID, location, price);
     }
 
     @Override
     public boolean reserveRoom(int id, int customerID, String location) throws RemoteException {
-        return roomsManager.reserveRoom(id, customerID, location);
+
+        if (!roomsManager.reserveRoom(id, customerID, location)) {
+            return false;
+        }
+
+        int price = queryRoomsPrice(id, location);
+
+        return customerManager.reserveRoom(id, customerID, location, price);
     }
 
     @Override
     public boolean bundle(int id, int customerID, Vector<String> flightNumbers, String location, boolean car, boolean room) throws RemoteException {
-        return false;
+        for(String flightNumber : flightNumbers){
+            try {
+                int parsedFlightNumber = Integer.parseInt(flightNumber);
+
+                // TODO: DEAL WITH THE CASE OF CORRUPTED DATA IF ONE CALL FAILS AND THE OTHERS GO THROUGH IN THE NEXT ITERATION, NOT NOW THOUGH
+                // it was said by TA in Discussion forum of myCourses that we do not need to deal with corrupt data for now, so it's okay
+                // TODO: WILL ALSO HAVE TO IMPLEMENT "UNRESERVE" METHODS FOR THIS
+
+                if(!reserveFlight(id, customerID, parsedFlightNumber)){
+                    return false;
+                }
+
+            } catch(NumberFormatException e){
+                System.out.println(e);
+                return false;
+            }
+        }
+
+        if(car && !reserveCar(id, customerID, location)){
+            return false;
+        }
+
+        return room ? reserveRoom(id, customerID, location) : true;
     }
 
     @Override
@@ -183,7 +229,7 @@ public class Middleware implements IResourceManager {
         return null;
     }
 
-    public static IResourceManager connectServer(String address, int port, String prefix) {
+    public IResourceManager connectServer(String address, int port, String prefix) {
 
         IResourceManager m_resourceManager = null;
 
@@ -191,7 +237,6 @@ public class Middleware implements IResourceManager {
             boolean first = true;
             while (true) {
 
-                System.out.println("here");
                 try {
                     Registry registry = LocateRegistry.getRegistry(address, port);
                     m_resourceManager = (IResourceManager) registry.lookup(prefix);
