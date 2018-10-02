@@ -7,6 +7,14 @@
     <groupId>Cars</groupId>
     <artifactId>Cars</artifactId>
     <version>1.0-SNAPSHOT</version>
+
+    <parent>
+        <groupId>COMP-512-DistributedSystems</groupId>
+        <artifactId>COMP-512-DistributedSystems</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../../</relativePath>
+    </parent>
+
     <dependencies>
         <dependency>
             <groupId>Common</groupId>
@@ -14,31 +22,16 @@
             <version>1.0-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20180813</version>
+        </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>cars.CarResourceManager</mainClass>
-                        </manifest>
-                    </archive>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+    <properties>
+        <skip.assembly>false</skip.assembly>
+        <main.class>cars.CarBootstrap</main.class>
+    </properties>
+    
 </project>
