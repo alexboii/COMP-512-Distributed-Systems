@@ -49,6 +49,14 @@ public class SocketUtils {
         return;
     }
 
+    public static void sendReply(OutputStreamWriter writer, JSONObject result) throws IOException, JSONException {
+        System.out.println("Sending back reply: " + reply);
+        writer.write(result.toString() + "\n");
+        writer.flush();
+        return;
+    }
+
+
     public static JSONObject sendAndReceive(JSONObject request, OutputStreamWriter writer, BufferedReader reader) {
         try {
             writer.write(request.toString() + "\n");
