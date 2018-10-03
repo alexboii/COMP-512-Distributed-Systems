@@ -40,7 +40,25 @@ public class SocketUtils {
         return server;
     }
 
-    public static <I> void sendReply(OutputStreamWriter writer, I result) throws IOException, JSONException {
+    public static void sendReply(OutputStreamWriter writer, int result) throws IOException, JSONException {
+        JSONObject reply = new JSONObject();
+        reply.put(RESULT, result);
+        System.out.println("Sending back reply: " + reply);
+        writer.write(reply.toString() + "\n");
+        writer.flush();
+        return;
+    }
+
+    public static void sendReply(OutputStreamWriter writer, String result) throws IOException, JSONException {
+        JSONObject reply = new JSONObject();
+        reply.put(RESULT, result);
+        System.out.println("Sending back reply: " + reply);
+        writer.write(reply.toString() + "\n");
+        writer.flush();
+        return;
+    }
+
+    public static void sendReply(OutputStreamWriter writer, boolean result) throws IOException, JSONException {
         JSONObject reply = new JSONObject();
         reply.put(RESULT, result);
         System.out.println("Sending back reply: " + reply);

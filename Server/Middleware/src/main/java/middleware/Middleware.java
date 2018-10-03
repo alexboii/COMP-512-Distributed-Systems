@@ -147,7 +147,7 @@ public class Middleware extends ResourceManager implements IServer {
         }
 
 
-        return customerManager.newCustomer(xid) == 1 && replyFlights.getInt(RESULT) == 1 && replyCar.getInt(RESULT) == 1 && replyRooms.getInt(RESULT) == 1 ? 1 : 0;
+        return customerManager.newCustomer(xid) > 0 && replyFlights.getInt(RESULT) > 0 && replyCar.getInt(RESULT) > 0 && replyRooms.getInt(RESULT) > 0 ? 1 : 0;
     }
 
     public boolean newCustomerId(JSONObject request) throws RemoteException, JSONException {

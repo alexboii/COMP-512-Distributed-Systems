@@ -68,7 +68,7 @@ public class RequestFactory {
         JSONObject request = new JSONObject();
 
         request.put(TYPE, CUSTOMER_ENTITY);
-        request.put(ACTION, NEW_CUSTOMER);
+        request.put(ACTION, NEW_CUSTOMER_ID);
         request.put(CUSTOMER_XID, xid);
         request.put(CUSTOMER_ID, cid);
 
