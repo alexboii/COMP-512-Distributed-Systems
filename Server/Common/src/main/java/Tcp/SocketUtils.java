@@ -1,8 +1,20 @@
 package Tcp;
 
+import Constants.ServerConstants;
+import RM.IResourceManager;
+import RM.ResourceManager;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import static Constants.GeneralConstants.RESULT;
 
 public class SocketUtils {
 
@@ -25,5 +37,32 @@ public class SocketUtils {
             }
         });
         return server;
+    }
+
+    public static <I> void sendReply(OutputStreamWriter writer, I result) throws IOException, JSONException {
+        JSONObject reply = new JSONObject();
+        reply.put(RESULT, result);
+        System.out.println("Sending back reply: " + reply);
+        writer.write(reply.toString() + "\n");
+        writer.flush();
+        return;
+    }
+
+    public static void startServerConnection(String address, int port, int maxConcurrentClients, IResourceManager rm){
+        try {
+            ServerSocket server = createServerSocket(address, port);
+
+            ExecutorService executors = Executors.newFixedThreadPool(maxConcurrentClients);
+
+            while (true) {
+
+                Socket client = server.accept();
+                System.out.println("Got client connection " + client);
+
+                executors.execute(new ProcessRequestRunnable(client, rm));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

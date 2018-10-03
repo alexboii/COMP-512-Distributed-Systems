@@ -1,77 +1,78 @@
-package cars;
+package flights;
 
 import Constants.ServerConstants;
 import RM.ResourceManager;
 import Tcp.IServer;
-import Tcp.ProcessRequestRunnable;
 import Tcp.SocketUtils;
-import com.sun.corba.se.spi.activation.Server;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 
 import static Constants.GeneralConstants.*;
 import static Tcp.SocketUtils.sendReply;
 
-public class CarServer extends ResourceManager implements IServer {
 
-    private static final String serverName = "Cars";
+/**
+ * Created by alex on 9/25/18.
+ */
+public class FlightsServer extends ResourceManager implements IServer {
+    private static final String serverName = "Flights";
     private static final int maxConcurrentClients = 10;
 
-    CarServer() {
+    public FlightsServer() {
         super(serverName);
     }
 
     @Override
     public void start(int port) {
-        SocketUtils.startServerConnection(ServerConstants.CAR_SERVER_NAME, port, maxConcurrentClients, this);
+        SocketUtils.startServerConnection(ServerConstants.FLIGHTS_SERVER_NAME, port, maxConcurrentClients, this);
     }
 
     @Override
     public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
         switch ((String) request.get(ACTION)) {
+            case ADD_FLIGHTS:
+                int xid = request.getInt(FLIGHT_XID);
+                int number = request.getInt(FLIGHT_NUMBER);
+                int count = request.getInt(FLIGHT_SEATS);
+                int price = request.getInt(FLIGHT_PRICE);
 
-            case ADD_CARS:
-                int xid = request.getInt(CAR_XID);
-                String location = request.getString(CAR_LOCATION);
-                int count = request.getInt(CAR_COUNT);
-                int price = request.getInt(CAR_PRICE);
-
-                boolean result = addCars(xid, location, count, price);
+                boolean result = addFlight(xid, number, count, price);
                 sendReply(writer, result);
                 break;
 
-            case DELETE_CARS:
-                xid = request.getInt(CAR_XID);
-                location = request.getString(CAR_LOCATION);
+            case DELETE_FLIGHTS:
+                xid = request.getInt(FLIGHT_XID);
+                number = request.getInt(FLIGHT_NUMBER);
 
-                result = deleteCars(xid, location);
+                result = deleteFlight(xid, number);
                 sendReply(writer, result);
                 break;
 
-            case QUERY_CARS:
-                xid = request.getInt(CAR_XID);
-                location = request.getString(CAR_LOCATION);
+            case QUERY_FLIGHTS:
+                xid = request.getInt(FLIGHT_XID);
+                number = request.getInt(FLIGHT_NUMBER);
 
-                int res = queryCars(xid, location);
+                int res = queryFlight(xid, number);
                 sendReply(writer, res);
                 break;
 
-            case QUERY_CARS_PRICE:
-                xid = request.getInt(CAR_XID);
-                location = request.getString(CAR_LOCATION);
+            case QUERY_FLIGHTS_PRICE:
+                xid = request.getInt(FLIGHT_XID);
+                number = request.getInt(FLIGHT_NUMBER);
 
-                res = queryCarsPrice(xid, location);
+                res = queryFlightPrice(xid, number);
                 sendReply(writer, res);
                 break;
 
-            case RESERVE_CARS:
-                xid = request.getInt(CAR_XID);
-                int customerId = request.getInt(CAR_CUSTOMER_ID);
-                location = request.getString(CAR_LOCATION);
+            case RESERVE_FLIGHTS:
+                xid = request.getInt(FLIGHT_XID);
+                int customerId = request.getInt(CUSTOMER_ID);
+                number = request.getInt(FLIGHT_NUMBER);
 
-                result = reserveCar(xid, customerId, location);
+                result = reserveFlight(xid, customerId, number);
                 sendReply(writer, result);
                 break;
 
@@ -100,6 +101,5 @@ public class CarServer extends ResourceManager implements IServer {
                 sendReply(writer, result);
                 break;
         }
-
     }
 }

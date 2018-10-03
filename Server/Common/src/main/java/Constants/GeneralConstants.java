@@ -9,6 +9,12 @@ public class GeneralConstants {
     public static final String ACTION = "action";
     public static final String RESULT = "result";
 
+    //TYPES
+    public static final String ROOM_ENTITY = "rooms";
+    public static final String FLIGHT_ENTITY = "flights";
+    public static final String CAR_ENTITY = "cars";
+    public static final String CUSTOMER_ENTITY = "customer";
+
     //CAR
     public static final String ADD_CARS = "AddCars";
     public static final String DELETE_CARS = "DeleteCars";
@@ -22,9 +28,35 @@ public class GeneralConstants {
     public static final String CAR_PRICE = "price";
     public static final String CAR_CUSTOMER_ID = "customerId";
 
+    //FLIGHT
+    public static final String ADD_FLIGHTS = "AddFlight";
+    public static final String DELETE_FLIGHTS = "DeleteFlight";
+    public static final String QUERY_FLIGHTS = "QueryFlight";
+    public static final String QUERY_FLIGHTS_PRICE = "QueryFlightPrice";
+    public static final String RESERVE_FLIGHTS = "ReserveFlight";
+
+    public static final String FLIGHT_XID = "xid";
+    public static final String FLIGHT_NUMBER = "flightNumber";
+    public static final String FLIGHT_SEATS = "seats";
+    public static final String FLIGHT_PRICE = "price";
+
+
+    //ROOMS
+    public static final String ADD_ROOMS = "AddRooms";
+    public static final String DELETE_ROOMS = "DeleteRooms";
+    public static final String QUERY_ROOMS = "QueryRooms";
+    public static final String QUERY_ROOMS_PRICE = "QueryRoomsPrice";
+    public static final String RESERVE_ROOMS = "ReserveRooms";
+
+    public static final String ROOM_XID = "xid";
+    public static final String ROOM_LOCATION = "location";
+    public static final String ROOM_COUNT = "count";
+    public static final String ROOM_PRICE = "price";
+
     //CUSTOMER
     public static final String CUSTOMER_XID = "xid";
     public static final String CUSTOMER_ID = "customerId";
+
     public static final String NEW_CUSTOMER = "AddCustomer";
     public static final String NEW_CUSTOMER_ID = "AddCustomerID";
     public static final String DELETE_CUSTOMER = "DeleteCustomer";

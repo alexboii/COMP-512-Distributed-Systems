@@ -1,10 +1,9 @@
 package RM;
 
-import jdk.nashorn.api.scripting.JSObject;
+import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
@@ -212,7 +211,7 @@ public interface IResourceManager extends Remote
      * @param request
      * @param writer
      */
-    public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException;
+    public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException;
 
     /**
      * Convenience for probing the resource manager.

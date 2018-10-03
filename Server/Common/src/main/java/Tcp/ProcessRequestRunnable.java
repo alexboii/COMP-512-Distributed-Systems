@@ -1,10 +1,10 @@
 package Tcp;
 
 import RM.IResourceManager;
-import RM.ResourceManager;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-import java.io.BufferedOutputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.Socket;
 
 /**
@@ -22,6 +22,26 @@ public class ProcessRequestRunnable implements Runnable {
 
     @Override
     public void run() {
+        BufferedReader reader = null;
+        OutputStreamWriter writer = null;
+        try {
+            reader = new BufferedReader(new InputStreamReader(this.client.getInputStream(), "UTF-8"));
+            writer = new OutputStreamWriter(client.getOutputStream(), "UTF-8");
 
+            String line = null;
+            while ((line = reader.readLine()) != null) {
+                System.out.println("Received: " + line);
+                handler.handleRequest(new JSONObject(line), writer);
+            }
+        } catch (IOException | JSONException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                reader.close();
+                writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
