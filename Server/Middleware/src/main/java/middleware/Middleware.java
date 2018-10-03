@@ -104,10 +104,12 @@ public class Middleware extends ResourceManager implements IServer {
         JSONObject result = null;
 
         try {
+            System.out.println("Sending request " + request + "to server: " + serverAddress + ":" + port);
             Socket server = new Socket(InetAddress.getByName(serverAddress), port);
-            System.out.println("Sending request to server: " + serverAddress + ":" + port);
             OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
             BufferedReader reader = new BufferedReader(new InputStreamReader(server.getInputStream(), CHAR_SET));
+
+            System.out.println("Successfully sent request " + request + "to server: " + serverAddress + ":" + port);
 
             result = SocketUtils.sendAndReceive(request, writer, reader);
 
