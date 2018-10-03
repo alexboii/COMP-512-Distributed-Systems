@@ -1,22 +1,20 @@
 package middleware;
 
 import Constants.ServerConstants;
-import RM.IResourceManager;
 import RM.ResourceManager;
 import Tcp.IServer;
 import Tcp.SocketUtils;
-import com.sun.corba.se.spi.activation.Server;
 import customer.CustomerResourceManager;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.util.Vector;
 
 import static Constants.GeneralConstants.*;
@@ -111,7 +109,7 @@ public class Middleware extends ResourceManager implements IServer {
             OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
             BufferedReader reader = new BufferedReader(new InputStreamReader(server.getInputStream(), CHAR_SET));
 
-            result = sendAndReceive(request, writer, reader);
+            result = SocketUtils.sendAndReceive(request, writer, reader);
 
             server.close();
             writer.close();
@@ -123,21 +121,6 @@ public class Middleware extends ResourceManager implements IServer {
         return result;
     }
 
-    private JSONObject sendAndReceive(JSONObject request, OutputStreamWriter writer, BufferedReader reader) {
-        try {
-            writer.write(request.toString() + "\n");
-            writer.flush();
-
-            String line = reader.readLine();
-            System.out.println("Reply from server: " + line + "\n");
-            JSONObject reply = new JSONObject(line);
-            return reply;
-        } catch (IOException | JSONException e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
 
 
     public int newCustomer(JSONObject request) throws RemoteException, JSONException {

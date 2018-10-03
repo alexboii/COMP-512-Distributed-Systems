@@ -6,6 +6,7 @@ import RM.ResourceManager;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
@@ -46,6 +47,22 @@ public class SocketUtils {
         writer.write(reply.toString() + "\n");
         writer.flush();
         return;
+    }
+
+    public static JSONObject sendAndReceive(JSONObject request, OutputStreamWriter writer, BufferedReader reader) {
+        try {
+            writer.write(request.toString() + "\n");
+            writer.flush();
+
+            String line = reader.readLine();
+            System.out.println("Reply from server: " + line + "\n");
+            JSONObject reply = new JSONObject(line);
+            return reply;
+        } catch (IOException | JSONException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     public static void startServerConnection(String address, int port, int maxConcurrentClients, IResourceManager rm){
