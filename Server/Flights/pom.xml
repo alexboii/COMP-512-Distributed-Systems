@@ -25,7 +25,7 @@
 
     <properties>
         <skip.assembly>false</skip.assembly>
-        <main.class>flights.FlightsServer</main.class>
+        <main.class>flights.FlightsBootstrap</main.class>
     </properties>
 
 </project>

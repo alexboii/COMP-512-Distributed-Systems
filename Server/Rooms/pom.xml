@@ -25,7 +25,7 @@
 
     <properties>
         <skip.assembly>false</skip.assembly>
-        <main.class>rooms.RoomsResourceManager</main.class>
+        <main.class>rooms.RoomsBootstrap</main.class>
     </properties>
 
 </project>
