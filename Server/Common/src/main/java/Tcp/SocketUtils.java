@@ -50,7 +50,7 @@ public class SocketUtils {
     }
 
     public static void sendReply(OutputStreamWriter writer, JSONObject result) throws IOException, JSONException {
-        System.out.println("Sending back reply: " + reply);
+        System.out.println("Sending back reply: " + result);
         writer.write(result.toString() + "\n");
         writer.flush();
         return;
