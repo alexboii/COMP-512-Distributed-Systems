@@ -2,7 +2,6 @@ package middleware;
 
 import Constants.ServerConstants;
 import RM.IResourceManager;
-import RM.ResourceManager;
 import customer.CustomerResourceManager;
 import org.json.JSONObject;
 
@@ -91,7 +90,7 @@ public class Middleware implements IResourceManager {
     public CustomerResourceManager customerManager;
 
     public Middleware() {
-        roomsManager = connectServer(ServerConstants.ROOMS_SERVER, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
+        roomsManager = connectServer(ServerConstants.ROOMS_SERVER_NAME, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
         flightsManager = connectServer(ServerConstants.FLIGHTS_SERVER_NAME, ServerConstants.FLIGHTS_SERVER_PORT, ServerConstants.FLIGHTS_PREFIX);
         customerManager = new CustomerResourceManager();
     }
