@@ -3,9 +3,7 @@ package cars;
 import Constants.ServerConstants;
 import RM.ResourceManager;
 import Tcp.IServer;
-import Tcp.ProcessRequestRunnable;
 import Tcp.SocketUtils;
-import com.sun.corba.se.spi.activation.Server;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -25,7 +23,7 @@ public class CarServer extends ResourceManager implements IServer {
 
     @Override
     public void start(int port) {
-        SocketUtils.startServerConnection(ServerConstants.CAR_SERVER_NAME, port, maxConcurrentClients, this);
+        SocketUtils.startServerConnection(ServerConstants.CAR_SERVER_ADDRESS, port, maxConcurrentClients, this);
     }
 
     @Override

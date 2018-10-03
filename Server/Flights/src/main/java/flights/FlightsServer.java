@@ -27,7 +27,7 @@ public class FlightsServer extends ResourceManager implements IServer {
 
     @Override
     public void start(int port) {
-        SocketUtils.startServerConnection(ServerConstants.FLIGHTS_SERVER_NAME, port, maxConcurrentClients, this);
+        SocketUtils.startServerConnection(ServerConstants.FLIGHTS_SERVER_ADDRESS, port, maxConcurrentClients, this);
     }
 
     @Override

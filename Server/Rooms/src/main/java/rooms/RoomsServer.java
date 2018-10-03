@@ -27,7 +27,7 @@ public class RoomsServer extends ResourceManager implements IServer {
     
     @Override
     public void start(int port) {
-        SocketUtils.startServerConnection(ServerConstants.ROOMS_SERVER_NAME, port, maxConcurrentClients, this);
+        SocketUtils.startServerConnection(ServerConstants.ROOMS_SERVER_ADDRESS, port, maxConcurrentClients, this);
     }
 
     @Override

@@ -10,7 +10,7 @@ import java.rmi.NotBoundException;
 
 public class RMIClient extends Client
 {
-	private static String s_serverHost = ServerConstants.MIDDLEWARE_SERVER;
+	private static String s_serverHost = ServerConstants.MIDDLEWARE_SERVER_ADDRESS;
 	private static int s_serverPort = ServerConstants.MIDDLEWARE_PORT;
 	private static String s_serverName = ServerConstants.MIDDLEWARE_PREFIX;
 

@@ -6,8 +6,11 @@ package Constants;
 public class GeneralConstants {
     public static final String groupPrefix = "group01";
 
+    public static final String CHAR_SET = "UTF-8";
+
     public static final String ACTION = "action";
     public static final String RESULT = "result";
+    public static final String TYPE = "type";
 
     //TYPES
     public static final String ROOM_ENTITY = "rooms";
@@ -60,5 +63,7 @@ public class GeneralConstants {
     public static final String NEW_CUSTOMER = "AddCustomer";
     public static final String NEW_CUSTOMER_ID = "AddCustomerID";
     public static final String DELETE_CUSTOMER = "DeleteCustomer";
+    public static final String QUERY_CUSTOMER = "QueryCustomer";
+    public static final String BUNDLE = "Bundle";
 
 }
