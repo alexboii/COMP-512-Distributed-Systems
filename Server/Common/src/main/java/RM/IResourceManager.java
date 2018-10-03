@@ -1,5 +1,10 @@
 package RM;
 
+import jdk.nashorn.api.scripting.JSObject;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
@@ -200,6 +205,14 @@ public interface IResourceManager extends Remote
      */
     public boolean bundle(int id, int customerID, Vector<String> flightNumbers, String location, boolean car, boolean room)
             throws RemoteException;
+
+
+    /**
+     * Method that each resource manager must implement in order to process requests properly
+     * @param request
+     * @param writer
+     */
+    public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException;
 
     /**
      * Convenience for probing the resource manager.

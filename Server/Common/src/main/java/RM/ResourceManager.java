@@ -14,7 +14,7 @@ import Utilities.Trace;
 import java.util.*;
 import java.rmi.RemoteException;
 
-public class ResourceManager implements IResourceManager {
+abstract public class ResourceManager implements IResourceManager {
     protected String m_name = "";
     protected RMHashMap m_data = new RMHashMap();
 

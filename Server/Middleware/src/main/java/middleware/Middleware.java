@@ -91,7 +91,6 @@ public class Middleware implements IResourceManager {
     public CustomerResourceManager customerManager;
 
     public Middleware() {
-//        carsManager = connectServer(ServerConstants.CAR_SERVER_NAME, ServerConstants.CAR_SERVER_PORT, ServerConstants.CAR_PREFIX);
         roomsManager = connectServer(ServerConstants.ROOMS_SERVER, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
         flightsManager = connectServer(ServerConstants.FLIGHTS_SERVER_NAME, ServerConstants.FLIGHTS_SERVER_PORT, ServerConstants.FLIGHTS_PREFIX);
         customerManager = new CustomerResourceManager();

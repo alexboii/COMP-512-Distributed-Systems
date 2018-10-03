@@ -7,6 +7,13 @@
     <groupId>Common</groupId>
     <artifactId>Common</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <dependencies>
+        <dependency>
+            <groupId>com.vaadin.external.google</groupId>
+            <artifactId>android-json</artifactId>
+            <version>0.0.20131108.vaadin1</version>
+        </dependency>
+    </dependencies>
 
     <parent>
         <groupId>COMP-512-DistributedSystems</groupId>

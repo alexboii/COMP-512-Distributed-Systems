@@ -65,7 +65,8 @@ public class CarServer extends ResourceManager {
         }
     }
 
-    private void handle(JSONObject request, OutputStreamWriter writer) throws IOException {
+    @Override
+    public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException {
 
         switch ((String) request.get(ACTION)) {
 
@@ -158,4 +159,5 @@ public class CarServer extends ResourceManager {
         writer.flush();
         return;
     }
+
 }
