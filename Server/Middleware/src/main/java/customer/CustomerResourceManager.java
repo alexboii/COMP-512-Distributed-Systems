@@ -3,7 +3,11 @@ package customer;
 import Model.*;
 import RM.ResourceManager;
 import Utilities.Trace;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.rmi.RemoteException;
 
 /**
@@ -61,6 +65,10 @@ public class CustomerResourceManager extends ResourceManager {
         return reserveItem(xid, customerID, Room.getKey(location), location, price);
     }
 
+    @Override
+    public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
+        return;
+    }
 }
 
 
