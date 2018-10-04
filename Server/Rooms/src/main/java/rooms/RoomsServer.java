@@ -24,7 +24,7 @@ public class RoomsServer extends ResourceManager implements IServer {
     public RoomsServer() {
         super(serverName);
     }
-    
+
     @Override
     public void start(int port) {
         SocketUtils.startServerConnection(ServerConstants.ROOMS_SERVER_ADDRESS, port, maxConcurrentClients, this);
@@ -49,7 +49,16 @@ public class RoomsServer extends ResourceManager implements IServer {
                 location = request.getString(ROOM_LOCATION);
 
                 result = deleteRooms(xid, location);
+
+                try {
+                    Thread.sleep(500000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+
                 sendReply(writer, result);
+
                 break;
 
             case QUERY_ROOMS:
