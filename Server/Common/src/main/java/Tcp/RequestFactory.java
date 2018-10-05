@@ -1,7 +1,10 @@
 package Tcp;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.Vector;
 
 import static Constants.GeneralConstants.*;
 import static Constants.GeneralConstants.CUSTOMER_XID;
@@ -200,7 +203,7 @@ public class RequestFactory {
         JSONObject request = new JSONObject();
 
         request.put(TYPE, CUSTOMER_ENTITY);
-        request.put(ACTION, RESERVE_FLIGHTS);
+        request.put(ACTION, RESERVE_FLIGHT);
         request.put(CUSTOMER_XID, xid);
         request.put(CUSTOMER_ID, cid);
         request.put(FLIGHT_NUMBER, flightNum);
@@ -233,5 +236,20 @@ public class RequestFactory {
     }
 
 
+    public static JSONObject getBundleRequest(int xid, int cid, Vector<String> flightNumbers, String location,
+                                              boolean bookCar, boolean bookRoom) throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, CUSTOMER_ENTITY);
+        request.put(ACTION, BUNDLE);
+        request.put(CUSTOMER_XID, xid);
+        request.put(CUSTOMER_ID, cid);
+        request.put(FLIGHT_NUMBERS, new JSONArray(flightNumbers));
+        request.put(ROOM_LOCATION, location);
+        request.put(BOOK_CAR, bookCar);
+        request.put(BOOK_ROOM, bookRoom);
+
+        return request;
+    }
 }
 

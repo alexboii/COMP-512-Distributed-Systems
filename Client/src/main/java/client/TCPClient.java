@@ -1,21 +1,17 @@
 package client;
 
 import Constants.ServerConstants;
-import RM.IResourceManager;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.rmi.RemoteException;
-import java.rmi.NotBoundException;
 
 import static Constants.GeneralConstants.CHAR_SET;
 
-public class RMIClient extends Client {
+public class TCPClient extends Client {
     private static String s_serverHost = ServerConstants.MIDDLEWARE_SERVER_ADDRESS;
     private static int s_serverPort = ServerConstants.MIDDLEWARE_PORT;
     private static String s_serverName = ServerConstants.MIDDLEWARE_PREFIX;
@@ -31,18 +27,13 @@ public class RMIClient extends Client {
             s_serverName = args[1];
         }
         if (args.length > 2) {
-            System.err.println((char) 27 + "[31;1mClient exception: " + (char) 27 + "[0mUsage: java client.client.RMIClient [server_hostname [server_rmiobject]]");
+            System.err.println((char) 27 + "[31;1mClient exception: " + (char) 27 + "[0mUsage: java client.client.TCPClient [server_hostname [server_rmiobject]]");
             System.exit(1);
-        }
-
-        // Set the security policy
-        if (System.getSecurityManager() == null) {
-            System.setSecurityManager(new SecurityManager());
         }
 
         // Get a reference to the RMIRegister
         try {
-            RMIClient client = new RMIClient();
+            TCPClient client = new TCPClient();
             client.connectServer();
             client.start();
         } catch (Exception e) {
@@ -52,15 +43,15 @@ public class RMIClient extends Client {
         }
     }
 
-    public RMIClient() {
+    public TCPClient() {
         super();
     }
 
     public void connectServer() {
-        connectServer(s_serverHost, s_serverPort, s_serverName);
+        connectServer(s_serverHost, s_serverPort);
     }
 
-    public void connectServer(String server, int port, String name) {
+    public void connectServer(String server, int port) {
         try {
             middleware = new Socket(InetAddress.getByName(server), port);
             System.out.println("Connected to middleware at: " + server + ":" + port);
@@ -70,9 +61,7 @@ public class RMIClient extends Client {
             Runtime.getRuntime().addShutdownHook(new Thread() {
                 public void run() {
                     try {
-                        middleware.close();
-                        middlewareWriter.close();
-                        middlewareReader.close();
+                        destroyConnection();
                     } catch (Exception e) {
                         System.err.println((char) 27 + "[31;1mServer exception: " + (char) 27 + "[0mUncaught exception");
                         e.printStackTrace();
@@ -82,6 +71,12 @@ public class RMIClient extends Client {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void destroyConnection() throws IOException {
+        middleware.close();
+        middlewareWriter.close();
+        middlewareReader.close();
     }
 }
 

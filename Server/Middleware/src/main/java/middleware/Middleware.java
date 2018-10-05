@@ -3,8 +3,10 @@ package middleware;
 import Constants.ServerConstants;
 import RM.ResourceManager;
 import Tcp.IServer;
+import Tcp.RequestFactory;
 import Tcp.SocketUtils;
 import customer.CustomerResourceManager;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -14,8 +16,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.rmi.RemoteException;
-import java.util.Vector;
 
 import static Constants.GeneralConstants.*;
 import static Tcp.SocketUtils.sendReply;
@@ -75,7 +75,7 @@ public class Middleware extends ResourceManager implements IServer {
                         boolRes = reserveCar(request);
                         sendReply(writer, boolRes);
                         break;
-                    case RESERVE_FLIGHTS:
+                    case RESERVE_FLIGHT:
                         boolRes = reserveFlight(request);
                         sendReply(writer, boolRes);
                         break;
@@ -84,8 +84,7 @@ public class Middleware extends ResourceManager implements IServer {
                         sendReply(writer, boolRes);
                         break;
                     case BUNDLE:
-                        // TODO: Implement
-                        boolRes = bundle(0, 0, null, null, false, false);
+                        boolRes = bundle(request);
                         sendReply(writer, boolRes);
                         break;
                 }
@@ -125,7 +124,7 @@ public class Middleware extends ResourceManager implements IServer {
 
 
 
-    public int newCustomer(JSONObject request) throws RemoteException, JSONException {
+    public int newCustomer(JSONObject request) throws JSONException {
         int xid = request.getInt(CUSTOMER_XID);
 
         JSONObject replyCar = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
@@ -150,7 +149,7 @@ public class Middleware extends ResourceManager implements IServer {
         return customerManager.newCustomer(xid) > 0 && replyFlights.getInt(RESULT) > 0 && replyCar.getInt(RESULT) > 0 && replyRooms.getInt(RESULT) > 0 ? 1 : 0;
     }
 
-    public boolean newCustomerId(JSONObject request) throws RemoteException, JSONException {
+    public boolean newCustomerId(JSONObject request) throws JSONException {
         int xid = request.getInt(CUSTOMER_XID);
         int cid = request.getInt(CUSTOMER_ID);
 
@@ -175,7 +174,7 @@ public class Middleware extends ResourceManager implements IServer {
         return customerManager.newCustomer(xid, cid) && replyCar.getBoolean(RESULT) && replyFlights.getBoolean(RESULT) && replyRooms.getBoolean(RESULT);
     }
 
-    public boolean deleteCustomer(JSONObject request) throws RemoteException, JSONException {
+    public boolean deleteCustomer(JSONObject request) throws JSONException {
         int xid = request.getInt(CUSTOMER_XID);
         int cid = request.getInt(CUSTOMER_ID);
 
@@ -201,7 +200,7 @@ public class Middleware extends ResourceManager implements IServer {
     }
 
 
-    public String queryCustomerInfo(JSONObject request) throws RemoteException, JSONException {
+    public String queryCustomerInfo(JSONObject request) throws JSONException {
         int xid = request.getInt(CUSTOMER_XID);
         int cid = request.getInt(CUSTOMER_ID);
 
@@ -209,7 +208,7 @@ public class Middleware extends ResourceManager implements IServer {
     }
 
 
-    public boolean reserveFlight(JSONObject request) throws RemoteException, JSONException {
+    public boolean reserveFlight(JSONObject request) throws JSONException {
         JSONObject replyFlights = sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
 
         if (replyFlights == null || !replyFlights.getBoolean(RESULT)) {
@@ -238,7 +237,7 @@ public class Middleware extends ResourceManager implements IServer {
         return customerManager.reserveFlight(xid, cid, flightNumber, replyPrice.getInt(RESULT));
     }
 
-    public boolean reserveCar(JSONObject request) throws RemoteException, JSONException {
+    public boolean reserveCar(JSONObject request) throws JSONException {
         JSONObject replyCar = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
 
         if (replyCar == null || !replyCar.getBoolean(RESULT)) {
@@ -266,7 +265,7 @@ public class Middleware extends ResourceManager implements IServer {
         return customerManager.reserveCar(xid, cid, location, replyPrice.getInt(RESULT));
     }
 
-    public boolean reserveRoom(JSONObject request) throws RemoteException, JSONException {
+    public boolean reserveRoom(JSONObject request) throws JSONException {
         JSONObject replyRoom = sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
 
         if (replyRoom == null || !replyRoom.getBoolean(RESULT)) {
@@ -294,40 +293,53 @@ public class Middleware extends ResourceManager implements IServer {
         return customerManager.reserveRoom(xid, cid, location, replyPrice.getInt(RESULT));
     }
 
-    // TODO: IMPLEMENT THIS
-    public boolean bundle(int id, int customerID, Vector<String> flightNumbers, String location, boolean car, boolean room) throws RemoteException {
-//        for (String flightNumber : flightNumbers) {
-//            try {
-//                int parsedFlightNumber = Integer.parseInt(flightNumber);
-//
-//                // TODO: DEAL WITH THE CASE OF CORRUPTED DATA IF ONE CALL FAILS AND THE OTHERS GO THROUGH IN THE NEXT ITERATION, NOT NOW THOUGH
-//                // it was said by TA in Discussion forum of myCourses that we do not need to deal with corrupt data for now, so it's okay
-//                // TODO: WILL ALSO HAVE TO IMPLEMENT "UNRESERVE" METHODS FOR THIS
-//
-//                if (!reserveFlight(id, customerID, parsedFlightNumber)) {
-//                    return false;
-//                }
-//
-//            } catch (NumberFormatException e) {
-//                System.out.println(e);
-//                return false;
-//            }
-//        }
-//
-//        if (car && !reserveCar(id, customerID, location)) {
-//            return false;
-//        }
-//
-//        return room ? reserveRoom(id, customerID, location) : true;
+    public boolean bundle(JSONObject request) throws JSONException {
 
-        return false;
+        int xid = request.getInt(CUSTOMER_XID);
+        int cid = request.getInt(CUSTOMER_ID);
+        String location = request.getString(ROOM_LOCATION);
+        JSONArray flightNumbers = request.getJSONArray(FLIGHT_NUMBERS);
+
+        for (int i = 0; i < flightNumbers.length(); i++) {
+            try {
+                String flightNumber = (String) flightNumbers.get(i);
+                int parsedFlightNumber = Integer.parseInt(flightNumber);
+
+                // TODO: DEAL WITH THE CASE OF CORRUPTED DATA IF ONE CALL FAILS AND THE OTHERS GO THROUGH IN THE NEXT ITERATION, NOT NOW THOUGH
+                // it was said by TA in Discussion forum of myCourses that we do not need to deal with corrupt data for now, so it's okay
+                // TODO: WILL ALSO HAVE TO IMPLEMENT "UNRESERVE" METHODS FOR THIS
+
+                JSONObject reserveFlightRequest = RequestFactory.getReserveFlightRequest(xid, cid, parsedFlightNumber);
+                if (!reserveFlight(reserveFlightRequest)) {
+                    return false;
+                }
+
+            } catch (NumberFormatException e) {
+                System.out.println(e);
+                return false;
+            }
+        }
+
+        if (request.getBoolean(BOOK_CAR)) {
+            JSONObject reserveCarRequest = RequestFactory.getReserveCarRequest(xid, cid, location);
+            if(!reserveCar(reserveCarRequest)) {
+                return false;
+            }
+        }
+
+        if (request.getBoolean(BOOK_ROOM)) {
+            JSONObject reserveRoomRequest = RequestFactory.getReserveRoomRequest(xid, cid, location);
+            if(!reserveRoom(reserveRoomRequest)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
-    public String getName() throws RemoteException {
+    public String getName() {
         return null;
     }
-
 
     @Override
     public void start(int port) {

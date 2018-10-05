@@ -36,8 +36,7 @@ public class GeneralConstants {
     public static final String DELETE_FLIGHTS = "DeleteFlight";
     public static final String QUERY_FLIGHTS = "QueryFlight";
     public static final String QUERY_FLIGHTS_PRICE = "QueryFlightPrice";
-    public static final String RESERVE_FLIGHTS = "ReserveFlight";
-
+    public static final String RESERVE_FLIGHT = "ReserveFlight";
     public static final String FLIGHT_XID = "xid";
     public static final String FLIGHT_NUMBER = "flightNumber";
     public static final String FLIGHT_SEATS = "seats";
@@ -64,6 +63,12 @@ public class GeneralConstants {
     public static final String NEW_CUSTOMER_ID = "AddCustomerID";
     public static final String DELETE_CUSTOMER = "DeleteCustomer";
     public static final String QUERY_CUSTOMER = "QueryCustomer";
+
+    //BUNDLE
     public static final String BUNDLE = "Bundle";
+    public static final String FLIGHT_NUMBERS = "flightNumbers";
+    public static final String BOOK_CAR = "bookCar";
+    public static final String BOOK_ROOM = "bookFlight";
+
 
 }

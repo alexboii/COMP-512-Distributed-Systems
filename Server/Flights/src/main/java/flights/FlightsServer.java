@@ -67,7 +67,7 @@ public class FlightsServer extends ResourceManager implements IServer {
                 sendReply(writer, res);
                 break;
 
-            case RESERVE_FLIGHTS:
+            case RESERVE_FLIGHT:
                 xid = request.getInt(FLIGHT_XID);
                 int customerId = request.getInt(CUSTOMER_ID);
                 number = request.getInt(FLIGHT_NUMBER);

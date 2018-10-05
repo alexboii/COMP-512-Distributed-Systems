@@ -7,12 +7,22 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="Cars" />
+        <module name="Client" />
         <module name="Common" />
+        <module name="Flight" />
         <module name="Flights" />
         <module name="Middleware" />
         <module name="Rooms" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel target="8" />
+    <bytecodeTargetLevel target="8">
+      <module name="Cars" target="1.8" />
+      <module name="Client" target="1.8" />
+      <module name="Common" target="1.8" />
+      <module name="COMP-512-DistributedSystems" target="1.8" />
+      <module name="Flight" target="1.8" />
+      <module name="Middleware" target="1.8" />
+      <module name="Rooms" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>

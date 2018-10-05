@@ -49,14 +49,6 @@ public class RoomsServer extends ResourceManager implements IServer {
                 location = request.getString(ROOM_LOCATION);
 
                 result = deleteRooms(xid, location);
-
-                try {
-                    Thread.sleep(500000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-
                 sendReply(writer, result);
 
                 break;

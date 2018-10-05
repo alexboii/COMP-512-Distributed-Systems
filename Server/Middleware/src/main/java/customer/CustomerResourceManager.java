@@ -3,12 +3,9 @@ package customer;
 import Model.*;
 import RM.ResourceManager;
 import Utilities.Trace;
-import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.rmi.RemoteException;
 
 /**
  * Created by alex on 10/1/18.
@@ -36,7 +33,7 @@ public class CustomerResourceManager extends ResourceManager {
     }
 
     @Override
-    public boolean deleteCustomer(int xid, int customerID) throws RemoteException {
+    public boolean deleteCustomer(int xid, int customerID) {
         Trace.info("RM::deleteCustomer(" + xid + ", " + customerID + ") called");
         Customer customer = (Customer) readData(xid, Customer.getKey(customerID));
         if (customer == null) {
@@ -51,22 +48,22 @@ public class CustomerResourceManager extends ResourceManager {
     }
 
     // Adds flight reservation to this customer
-    public boolean reserveFlight(int xid, int customerID, int flightNum, int price) throws RemoteException {
+    public boolean reserveFlight(int xid, int customerID, int flightNum, int price) {
         return reserveItem(xid, customerID, Flight.getKey(flightNum), String.valueOf(flightNum), price);
     }
 
     // Adds car reservation to this customer
-    public boolean reserveCar(int xid, int customerID, String location, int price) throws RemoteException {
+    public boolean reserveCar(int xid, int customerID, String location, int price) {
         return reserveItem(xid, customerID, Car.getKey(location), location, price);
     }
 
     // Adds room reservation to this customer
-    public boolean reserveRoom(int xid, int customerID, String location, int price) throws RemoteException {
+    public boolean reserveRoom(int xid, int customerID, String location, int price) {
         return reserveItem(xid, customerID, Room.getKey(location), location, price);
     }
 
     @Override
-    public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
+    public void handleRequest(JSONObject request, OutputStreamWriter writer) {
         return;
     }
 }
