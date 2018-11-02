@@ -64,13 +64,13 @@ public class LockManager {
                             lockTable.remove(new TransactionLockObject(xid, data, TransactionLockObject.LockType.LOCK_READ));
                             lockTable.remove(new DataLockObject(xid, data, TransactionLockObject.LockType.LOCK_READ));
                             // Trace.info("LM::lock(" + xid + ", " + data + ", " + lockType + ") converted");
-                        } else {
-                            // Lock request that is not lock conversion
-                            this.lockTable.add(xLockObject);
-                            this.lockTable.add(dataLockObject);
+                        } 
+                        
+                        // Lock request that is not lock conversion
+                        this.lockTable.add(xLockObject);
+                        this.lockTable.add(dataLockObject);
 
-                            Trace.info("LM::lock(" + xid + ", " + data + ", " + lockType + ") granted");
-                        }
+                        Trace.info("LM::lock(" + xid + ", " + data + ", " + lockType + ") granted");
                     }
                 }
                 if (bConflict) {
