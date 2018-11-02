@@ -205,10 +205,10 @@ public class LockManager {
                     // (1) transaction already had a READ lock
                     // (2) transaction already had a WRITE lock
                     // Seeing the comments at the top of this function might be helpful
-                    if (dataLockObject.getLockType() == TransactionLockObject.LockType.LOCK_READ) {
+                    if (l_dataLockObject.getLockType() == TransactionLockObject.LockType.LOCK_READ) {
                         // we already have a read lock
                         bitset.set(0);
-                    } else if (dataLockObject.getLockType() == TransactionLockObject.LockType.LOCK_WRITE) {
+                    } else if (l_dataLockObject.dataLockObject.getLockType() == TransactionLockObject.LockType.LOCK_WRITE) {
                         // we already have a write lock
                         throw new RedundantLockRequestException(dataLockObject.getXId(), "Redundant write lock request");
                     }
