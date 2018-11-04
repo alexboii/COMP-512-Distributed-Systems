@@ -12,7 +12,7 @@ POM_FILE_NAME="pom.xml"
 
 #servers
 COMMON_SERVER="mimi.cs.mcgill.ca"
-CARS_SERVER="lab2-17.cs.mcgill.ca"
+CARS_SERVER="lab2-31.cs.mcgill.ca"
 FLIGHTS_SERVER="lab2-14.cs.mcgill.ca"
 ROOMS_SERVER="lab2-35.cs.mcgill.ca"
 MIDDLEWARE_SERVER="lab2-29.cs.mcgill.ca"
