@@ -5,6 +5,7 @@ import RM.ResourceManager;
 import Tcp.IServer;
 import Tcp.RequestFactory;
 import Tcp.SocketUtils;
+import Utilities.FileLogger;
 import customer.CustomerResourceManager;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -16,6 +17,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
 import static Tcp.SocketUtils.sendReply;
@@ -25,6 +27,7 @@ public class Middleware extends ResourceManager implements IServer {
     private static final int maxConcurrentClients = 10;
     public CustomerResourceManager customerManager;
 
+    Logger logger = FileLogger.getLogger(Middleware.class);
 
     public static void main(String[] args) {
         Middleware obj = new Middleware();
@@ -103,12 +106,12 @@ public class Middleware extends ResourceManager implements IServer {
         JSONObject result = null;
 
         try {
-            System.out.println("Sending request " + request + "to server: " + serverAddress + ":" + port);
+            logger.info("Sending request " + request + "to server: " + serverAddress + ":" + port);
             Socket server = new Socket(InetAddress.getByName(serverAddress), port);
             OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
             BufferedReader reader = new BufferedReader(new InputStreamReader(server.getInputStream(), CHAR_SET));
 
-            System.out.println("Successfully sent request " + request + "to server: " + serverAddress + ":" + port);
+            logger.info("Successfully sent request " + request + "to server: " + serverAddress + ":" + port);
 
             result = SocketUtils.sendAndReceive(request, writer, reader);
 
@@ -315,7 +318,7 @@ public class Middleware extends ResourceManager implements IServer {
                 }
 
             } catch (NumberFormatException e) {
-                System.out.println(e);
+                logger.severe(e.toString());
                 return false;
             }
         }
