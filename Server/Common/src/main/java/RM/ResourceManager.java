@@ -299,7 +299,7 @@ abstract public class ResourceManager implements IResourceManager {
             return "";
         } else {
             logger.info("RM::queryCustomerInfo(" + xid + ", " + customerID + ")");
-            System.out.println(customer.getBill());
+            logger.info(customer.getBill());
             return customer.getBill();
         }
     }

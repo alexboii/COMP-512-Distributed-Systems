@@ -154,7 +154,7 @@ public class LockManager {
                                         waitLockObject.getThread().notify();
                                     }
                                 } catch (Exception e) {
-                                    System.out.println("Exception on unlock\n" + e.getMessage());
+                                    logger.severe("Exception on unlock\n" + e.getMessage());
                                 }
                             }
 
@@ -170,7 +170,7 @@ public class LockManager {
                                     waitLockObject.getThread().notify();
                                 }
                             } catch (Exception e) {
-                                System.out.println("Exception e\n" + e.getMessage());
+                                logger.severe("Exception e\n" + e.getMessage());
                             }
                         }
                     }
