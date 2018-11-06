@@ -10,6 +10,7 @@ import java.util.*;
 import java.io.*;
 
 import static Constants.GeneralConstants.RESULT;
+import static Constants.GeneralConstants.SHOULD_ABORT;
 
 public abstract class Client {
     protected Socket middleware;
@@ -71,6 +72,16 @@ public abstract class Client {
                 success = true;
                 break;
             }
+            case Start: {
+                checkArgumentsCount(1, arguments.size());
+                System.out.println("Starting a new transaction");
+                JSONObject request = RequestFactory.getNewTransactionRequest();
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+                int xid = result.getInt(RESULT);
+                System.out.println("Transaction ID: " + xid);
+                success = true;
+                break;
+            }
             case AddFlight: {
                 checkArgumentsCount(5, arguments.size());
 
@@ -112,6 +123,8 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getAddCarRequest(id, location, numCars, price);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
+
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Cars added");
                     success = true;
@@ -136,6 +149,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getAddRoomRequest(id, location, numRooms, price);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Rooms added");
                     success = true;
@@ -154,6 +168,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getAddCustomerRequest(id);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 int customer = result.getInt(RESULT);
 
                 System.out.println("Add customer ID: " + customer);
@@ -172,6 +187,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getAddCustomerIdRequest(id, customerID);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Add customer ID: " + customerID);
                     success = true;
@@ -192,6 +208,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getDeleteFlightRequest(id, flightNum);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Flight Deleted");
                     success = true;
@@ -212,6 +229,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getDeleteCarRequest(id, location);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Cars Deleted");
                     success = true;
@@ -232,6 +250,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getDeleteRoomRequest(id, location);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Rooms Deleted");
                     success = true;
@@ -252,6 +271,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getDeleteCustomerRequest(id, customerID);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Customer Deleted");
                     success = true;
@@ -272,6 +292,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getQueryFlightRequest(id, flightNum);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 int seats = result.getInt(RESULT);
                 System.out.println("Number of seats available: " + seats);
                 success = true;
@@ -289,6 +310,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getQueryCarRequest(id, location);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 int numCars = result.getInt(RESULT);
                 System.out.println("Number of cars at this location: " + numCars);
                 success = true;
@@ -306,6 +328,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getQueryRoomRequest(id, location);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 int numRoom = result.getInt(RESULT);
                 System.out.println("Number of rooms at this location: " + numRoom);
                 success = true;
@@ -323,6 +346,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getQueryCustomerRequest(id, customerID);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 String bill = result.getString(RESULT);
                 System.out.print("Bill: " + bill);
                 success = true;
@@ -340,6 +364,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getQueryFlightPriceRequest(id, flightNum);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 int price = result.getInt(RESULT);
                 System.out.println("Price of a seat: " + price);
                 success = true;
@@ -357,6 +382,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getQueryCarPriceRequest(id, location);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 int price = result.getInt(RESULT);
                 System.out.println("Price of cars at this location: " + price);
                 success = true;
@@ -374,6 +400,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getQueryRoomPriceRequest(id, location);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 int price = result.getInt(RESULT);
                 System.out.println("Price of rooms at this location: " + price);
                 success = true;
@@ -393,6 +420,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getReserveFlightRequest(id, customerID, flightNum);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Flight Reserved");
                     success = true;
@@ -415,6 +443,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getReserveCarRequest(id, customerID, location);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Car Reserved");
                     success = true;
@@ -437,6 +466,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getReserveRoomRequest(id, customerID, location);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Room Reserved");
                     success = true;
@@ -471,6 +501,7 @@ public abstract class Client {
                 JSONObject request = RequestFactory.getBundleRequest(id, customerID, flightNumbers, location, bookCar, bookRoom);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
+                checkAbort(result);
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Bundle Reserved");
                     success = true;
@@ -479,13 +510,54 @@ public abstract class Client {
                 }
                 break;
             }
-            case Quit:
+            case Quit: {
                 checkArgumentsCount(1, arguments.size());
 
                 System.out.println("Quitting client");
                 System.exit(0);
+                break;
+            }
+            case Commit: {
+                checkArgumentsCount(2, arguments.size());
+                int xid = toInt(arguments.elementAt(1));
+                System.out.println("Committing the transaction [xid=" + xid + "]");
+
+                JSONObject request = RequestFactory.getCommitRequest(xid);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                if (result.getBoolean(RESULT)) {
+                    System.out.println("Transaction committed");
+                    success = true;
+                } else {
+                    System.out.println("Unable to commit the transaction. See server logs");
+                }
+                break;
+            }
+            case Abort: {
+                checkArgumentsCount(2, arguments.size());
+                int xid = toInt(arguments.elementAt(1));
+                System.out.println("Aborting the transaction [xid=" + xid + "]");
+
+                JSONObject request = RequestFactory.getAbortRequest(xid);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                if (result.getBoolean(RESULT)) {
+                    System.out.println("Transaction aborted");
+                    success = true;
+                } else {
+                    System.out.println("Unable to abort the transaction. See server logs");
+                }
+                break;
+            }
+
         }
         return success;
+    }
+
+    private void checkAbort(JSONObject result) throws JSONException {
+        if(result.has(SHOULD_ABORT) && result.getBoolean(SHOULD_ABORT)) {
+            System.out.println("Transaction aborted");
+        }
     }
 
     public static Vector<String> parse(String command) {

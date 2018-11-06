@@ -3,7 +3,7 @@ package Model;
 import java.util.*;
 
 // A specialization of HashMap with some extra diagnostics
-public class RMHashMap extends HashMap<String, RMItem>
+public class RMHashMap extends HashMap<String, ResourceItem>
 {
     public RMHashMap() {
         super();
@@ -31,7 +31,7 @@ public class RMHashMap extends HashMap<String, RMItem>
         RMHashMap obj = new RMHashMap();
         for (String key : keySet())
         {
-            obj.put(key, (RMItem)get(key).clone());
+            obj.put(key, (ResourceItem)get(key).clone());
         }
         return obj;
     }

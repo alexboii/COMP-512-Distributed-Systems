@@ -1,9 +1,10 @@
 package LockManager;
 
-import Utilities.Trace;
+import Utilities.FileLogger;
 
 import java.util.BitSet;
 import java.util.Vector;
+import java.util.logging.Logger;
 
 public class LockManager {
     private static int TABLE_SIZE = 2039;
@@ -12,6 +13,8 @@ public class LockManager {
     private static TPHashTable lockTable = new TPHashTable(LockManager.TABLE_SIZE);
     private static TPHashTable stampTable = new TPHashTable(LockManager.TABLE_SIZE);
     private static TPHashTable waitTable = new TPHashTable(LockManager.TABLE_SIZE);
+
+    private final Logger logger = FileLogger.getLogger(LockManager.class);
 
     public LockManager() {
         super();
@@ -31,7 +34,7 @@ public class LockManager {
             return false;
         }
 
-        Trace.info("LM::lock(" + xid + ", " + data + ", " + lockType + ") called");
+        logger.info("LM::lock(" + xid + ", " + data + ", " + lockType + ") called");
 
         // Two objects in lock table for easy lookup
         TransactionLockObject xLockObject = new TransactionLockObject(xid, data, lockType);
@@ -63,14 +66,14 @@ public class LockManager {
                             // Lock conversion
                             lockTable.remove(new TransactionLockObject(xid, data, TransactionLockObject.LockType.LOCK_READ));
                             lockTable.remove(new DataLockObject(xid, data, TransactionLockObject.LockType.LOCK_READ));
-                            // Trace.info("LM::lock(" + xid + ", " + data + ", " + lockType + ") converted");
+                            logger.info("LM::lock(" + xid + ", " + data + ", " + lockType + ") converted");
                         } 
                         
                         // Lock request that is not lock conversion
                         this.lockTable.add(xLockObject);
                         this.lockTable.add(dataLockObject);
 
-                        Trace.info("LM::lock(" + xid + ", " + data + ", " + lockType + ") granted");
+                        logger.info("LM::lock(" + xid + ", " + data + ", " + lockType + ") granted");
                     }
                 }
                 if (bConflict) {
@@ -82,7 +85,7 @@ public class LockManager {
             throw deadlock;
         } catch (RedundantLockRequestException redundantlockrequest) {
             // Ignore redundant lock requests
-            Trace.info("LM::lock(" + xid + ", " + data + ", " + lockType + ") " + redundantlockrequest.getLocalizedMessage());
+            logger.info("LM::lock(" + xid + ", " + data + ", " + lockType + ") " + redundantlockrequest.getLocalizedMessage());
             return true;
         }
 
@@ -110,7 +113,7 @@ public class LockManager {
                 xLockObject = (TransactionLockObject) vect.elementAt(i);
                 this.lockTable.remove(xLockObject);
 
-                Trace.info("LM::unlock(" + xid + ", " + xLockObject.getDataName() + ", " + xLockObject.getLockType() + ") unlocked");
+                logger.info("LM::unlock(" + xid + ", " + xLockObject.getDataName() + ", " + xLockObject.getLockType() + ") unlocked");
 
                 DataLockObject dataLockObject = new DataLockObject(xLockObject.getXId(), xLockObject.getDataName(), xLockObject.getLockType());
                 this.lockTable.remove(dataLockObject);
@@ -217,13 +220,13 @@ public class LockManager {
                 if (l_dataLockObject.getLockType() == TransactionLockObject.LockType.LOCK_WRITE) {
                     // Transaction is requesting a READ lock and some other transaction
                     // already has a WRITE lock on it ==> conflict
-                    Trace.info("LM::lockConflict(" + dataLockObject.getXId() + ", " + dataLockObject.getDataName() + ") Want READ, someone has WRITE");
+                    logger.info("LM::lockConflict(" + dataLockObject.getXId() + ", " + dataLockObject.getDataName() + ") Want READ, someone has WRITE");
                     return true;
                 }
             } else if (dataLockObject.getLockType() == TransactionLockObject.LockType.LOCK_WRITE) {
                 // Transaction is requesting a WRITE lock and some other transaction has either
                 // a READ or a WRITE lock on it ==> conflict
-                Trace.info("LM::lockConflict(" + dataLockObject.getXId() + ", " + dataLockObject.getDataName() + ") Want WRITE, someone has READ or WRITE");
+                logger.info("LM::lockConflict(" + dataLockObject.getXId() + ", " + dataLockObject.getDataName() + ") Want WRITE, someone has READ or WRITE");
                 return true;
             }
         }
@@ -234,7 +237,7 @@ public class LockManager {
     }
 
     private void WaitLock(DataLockObject dataLockObject) throws DeadlockException {
-        Trace.info("LM::waitLock(" + dataLockObject.getXId() + ", " + dataLockObject.getDataName() + ", " + dataLockObject.getLockType() + ") called");
+        logger.info("LM::waitLock(" + dataLockObject.getXId() + ", " + dataLockObject.getDataName() + ", " + dataLockObject.getLockType() + ") called");
 
         // Check timestamp or add a new one.
         //
@@ -296,7 +299,7 @@ public class LockManager {
 
     // CleanupDeadlock cleans up stampTable and waitTable, and throws DeadlockException
     private void cleanupDeadlock(TimeObject timeObject, WaitLockObject waitLockObject) throws DeadlockException {
-        Trace.info("LM::deadlock(" + waitLockObject.getXId() + ", " + waitLockObject.getDataName() + ", " + waitLockObject.getLockType() + ") called");
+        logger.info("LM::deadlock(" + waitLockObject.getXId() + ", " + waitLockObject.getDataName() + ", " + waitLockObject.getLockType() + ") called");
         synchronized (this.stampTable) {
             synchronized (this.waitTable) {
                 this.stampTable.remove(timeObject);

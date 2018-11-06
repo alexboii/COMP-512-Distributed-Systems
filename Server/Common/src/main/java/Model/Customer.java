@@ -5,9 +5,7 @@
 
 package Model;
 
-import java.util.*;
-
-public class Customer extends RMItem {
+public class Customer extends ResourceItem {
     private int m_ID;
     private RMHashMap m_reservations;
 

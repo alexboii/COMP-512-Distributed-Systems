@@ -10,6 +10,7 @@ import customer.CustomerResourceManager;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import transaction.XIDManager;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,8 +27,9 @@ public class Middleware extends ResourceManager implements IServer {
     private static final String serverName = "Middleware";
     private static final int maxConcurrentClients = 10;
     public CustomerResourceManager customerManager;
+    private XIDManager xIDManager;
 
-    Logger logger = FileLogger.getLogger(Middleware.class);
+    private static final Logger logger = FileLogger.getLogger(Middleware.class);
 
     public static void main(String[] args) {
         Middleware obj = new Middleware();
@@ -37,6 +39,7 @@ public class Middleware extends ResourceManager implements IServer {
     public Middleware() {
         super(serverName);
         customerManager = new CustomerResourceManager();
+        xIDManager = new XIDManager();
     }
 
 
@@ -91,6 +94,28 @@ public class Middleware extends ResourceManager implements IServer {
                         sendReply(writer, boolRes);
                         break;
                 }
+                break;
+
+            case TRANSACTION:
+
+                switch ((String) request.get(ACTION)) {
+
+                    case NEW_TRANSACTION:
+                        int result = xIDManager.newTransaction();
+                        sendReply(writer, result);
+                        break;
+
+                    case COMMIT:
+                        boolean boolRes = sendRequestToAllServers(request);
+                        sendReply(writer, boolRes);
+                        break;
+
+                    case ABORT:
+                        boolRes = sendRequestToAllServers(request);
+                        sendReply(writer, boolRes);
+                        break;
+                }
+                break;
         }
     }
 
@@ -102,8 +127,9 @@ public class Middleware extends ResourceManager implements IServer {
      * @param request
      * @return
      */
-    private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request) {
+    private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request) throws JSONException {
         JSONObject result = null;
+        boolean abort = false;
 
         try {
             logger.info("Sending request " + request + "to server: " + serverAddress + ":" + port);
@@ -115,6 +141,10 @@ public class Middleware extends ResourceManager implements IServer {
 
             result = SocketUtils.sendAndReceive(request, writer, reader);
 
+            if(result.has(SHOULD_ABORT)) {
+                abort = result.getBoolean(SHOULD_ABORT);
+            }
+
             server.close();
             writer.close();
             reader.close();
@@ -122,13 +152,25 @@ public class Middleware extends ResourceManager implements IServer {
             e.printStackTrace();
         }
 
+        if(abort){
+            logger.info("Aborting transaction: " + request.getInt(XID));
+            JSONObject abortRequest = RequestFactory.getAbortRequest(request.getInt(XID));
+            sendRequestToAllServers(abortRequest);
+        }
+
         return result;
     }
 
+    private boolean sendRequestToAllServers(JSONObject request) throws JSONException {
+        logger.info("Sending request to all servers. " + request);
+        return sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request).getBoolean(RESULT) &&
+                sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request).getBoolean(RESULT) &&
+                sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request).getBoolean(RESULT);
+    }
 
 
     public int newCustomer(JSONObject request) throws JSONException {
-        int xid = request.getInt(CUSTOMER_XID);
+        int xid = request.getInt(XID);
 
         JSONObject replyCar = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
 
@@ -153,7 +195,7 @@ public class Middleware extends ResourceManager implements IServer {
     }
 
     public boolean newCustomerId(JSONObject request) throws JSONException {
-        int xid = request.getInt(CUSTOMER_XID);
+        int xid = request.getInt(XID);
         int cid = request.getInt(CUSTOMER_ID);
 
         JSONObject replyCar = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
@@ -178,7 +220,7 @@ public class Middleware extends ResourceManager implements IServer {
     }
 
     public boolean deleteCustomer(JSONObject request) throws JSONException {
-        int xid = request.getInt(CUSTOMER_XID);
+        int xid = request.getInt(XID);
         int cid = request.getInt(CUSTOMER_ID);
 
         JSONObject replyCar = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
@@ -204,7 +246,7 @@ public class Middleware extends ResourceManager implements IServer {
 
 
     public String queryCustomerInfo(JSONObject request) throws JSONException {
-        int xid = request.getInt(CUSTOMER_XID);
+        int xid = request.getInt(XID);
         int cid = request.getInt(CUSTOMER_ID);
 
         return customerManager.queryCustomerInfo(xid, cid);
@@ -219,7 +261,7 @@ public class Middleware extends ResourceManager implements IServer {
         }
 
 
-        int xid = request.getInt(CUSTOMER_XID);
+        int xid = request.getInt(XID);
         int cid = request.getInt(CUSTOMER_ID);
         int flightNumber = request.getInt(FLIGHT_NUMBER);
 
@@ -227,7 +269,7 @@ public class Middleware extends ResourceManager implements IServer {
 
         priceRequest.put(TYPE, FLIGHT_ENTITY);
         priceRequest.put(ACTION, QUERY_FLIGHTS_PRICE);
-        priceRequest.put(CUSTOMER_XID, xid);
+        priceRequest.put(XID, xid);
         priceRequest.put(FLIGHT_NUMBER, flightNumber);
 
 
@@ -247,7 +289,7 @@ public class Middleware extends ResourceManager implements IServer {
             return false;
         }
 
-        int xid = request.getInt(CUSTOMER_XID);
+        int xid = request.getInt(XID);
         int cid = request.getInt(CUSTOMER_ID);
         String location = request.getString(CAR_LOCATION);
 
@@ -255,7 +297,7 @@ public class Middleware extends ResourceManager implements IServer {
 
         priceRequest.put(TYPE, CAR_ENTITY);
         priceRequest.put(ACTION, QUERY_CARS_PRICE);
-        priceRequest.put(CUSTOMER_XID, xid);
+        priceRequest.put(XID, xid);
         priceRequest.put(CAR_LOCATION, location);
 
 
@@ -275,7 +317,7 @@ public class Middleware extends ResourceManager implements IServer {
             return false;
         }
 
-        int xid = request.getInt(CUSTOMER_XID);
+        int xid = request.getInt(XID);
         int cid = request.getInt(CUSTOMER_ID);
         String location = request.getString(ROOM_LOCATION);
 
@@ -283,7 +325,7 @@ public class Middleware extends ResourceManager implements IServer {
 
         priceRequest.put(TYPE, ROOM_ENTITY);
         priceRequest.put(ACTION, QUERY_ROOMS_PRICE);
-        priceRequest.put(CUSTOMER_XID, xid);
+        priceRequest.put(XID, xid);
         priceRequest.put(ROOM_LOCATION, location);
 
 
@@ -298,7 +340,7 @@ public class Middleware extends ResourceManager implements IServer {
 
     public boolean bundle(JSONObject request) throws JSONException {
 
-        int xid = request.getInt(CUSTOMER_XID);
+        int xid = request.getInt(XID);
         int cid = request.getInt(CUSTOMER_ID);
         String location = request.getString(ROOM_LOCATION);
         JSONArray flightNumbers = request.getJSONArray(FLIGHT_NUMBERS);

@@ -7,7 +7,7 @@ import org.json.JSONObject;
 import java.util.Vector;
 
 import static Constants.GeneralConstants.*;
-import static Constants.GeneralConstants.CUSTOMER_XID;
+import static Constants.GeneralConstants.XID;
 import static Constants.GeneralConstants.FLIGHT_NUMBER;
 
 /**
@@ -20,7 +20,7 @@ public class RequestFactory {
 
         request.put(TYPE, FLIGHT_ENTITY);
         request.put(ACTION, ADD_FLIGHTS);
-        request.put(CUSTOMER_XID, id);
+        request.put(XID, id);
         request.put(FLIGHT_NUMBER, flightNum);
         request.put(FLIGHT_SEATS, flightSeats);
         request.put(FLIGHT_PRICE, flightPrice);
@@ -35,7 +35,7 @@ public class RequestFactory {
 
         request.put(TYPE, CAR_ENTITY);
         request.put(ACTION, ADD_CARS);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(CAR_LOCATION, location);
         request.put(CAR_COUNT, count);
         request.put(CAR_PRICE, price);
@@ -49,7 +49,7 @@ public class RequestFactory {
 
         request.put(TYPE, ROOM_ENTITY);
         request.put(ACTION, ADD_ROOMS);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(ROOM_LOCATION, location);
         request.put(ROOM_COUNT, count);
         request.put(ROOM_PRICE, price);
@@ -62,7 +62,7 @@ public class RequestFactory {
 
         request.put(TYPE, CUSTOMER_ENTITY);
         request.put(ACTION, NEW_CUSTOMER);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
 
         return request;
     }
@@ -72,7 +72,7 @@ public class RequestFactory {
 
         request.put(TYPE, CUSTOMER_ENTITY);
         request.put(ACTION, NEW_CUSTOMER_ID);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(CUSTOMER_ID, cid);
 
         return request;
@@ -83,7 +83,7 @@ public class RequestFactory {
 
         request.put(TYPE, FLIGHT_ENTITY);
         request.put(ACTION, DELETE_FLIGHTS);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(FLIGHT_NUMBER, flightNum);
 
         return request;
@@ -94,7 +94,7 @@ public class RequestFactory {
 
         request.put(TYPE, CAR_ENTITY);
         request.put(ACTION, DELETE_CARS);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(CAR_LOCATION, location);
 
         return request;
@@ -105,7 +105,7 @@ public class RequestFactory {
 
         request.put(TYPE, ROOM_ENTITY);
         request.put(ACTION, DELETE_ROOMS);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(ROOM_LOCATION, location);
 
         return request;
@@ -116,7 +116,7 @@ public class RequestFactory {
 
         request.put(TYPE, CUSTOMER_ENTITY);
         request.put(ACTION, DELETE_CUSTOMER);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(CUSTOMER_ID, cid);
 
         return request;
@@ -127,7 +127,7 @@ public class RequestFactory {
 
         request.put(TYPE, FLIGHT_ENTITY);
         request.put(ACTION, QUERY_FLIGHTS);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(FLIGHT_NUMBER, flightNum);
 
         return request;
@@ -138,7 +138,7 @@ public class RequestFactory {
 
         request.put(TYPE, ROOM_ENTITY);
         request.put(ACTION, QUERY_ROOMS);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(ROOM_LOCATION, location);
 
         return request;
@@ -149,7 +149,7 @@ public class RequestFactory {
 
         request.put(TYPE, CAR_ENTITY);
         request.put(ACTION, QUERY_CARS);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(CAR_LOCATION, location);
 
         return request;
@@ -160,7 +160,7 @@ public class RequestFactory {
 
         request.put(TYPE, CUSTOMER_ENTITY);
         request.put(ACTION, QUERY_CUSTOMER);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(CUSTOMER_ID, cid);
 
         return request;
@@ -171,7 +171,7 @@ public class RequestFactory {
 
         request.put(TYPE, FLIGHT_ENTITY);
         request.put(ACTION, QUERY_FLIGHTS_PRICE);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(FLIGHT_NUMBER, flightNum);
 
         return request;
@@ -182,7 +182,7 @@ public class RequestFactory {
 
         request.put(TYPE, ROOM_ENTITY);
         request.put(ACTION, QUERY_ROOMS_PRICE);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(ROOM_LOCATION, location);
 
         return request;
@@ -193,7 +193,7 @@ public class RequestFactory {
 
         request.put(TYPE, CAR_ENTITY);
         request.put(ACTION, QUERY_CARS_PRICE);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(CAR_LOCATION, location);
 
         return request;
@@ -204,7 +204,7 @@ public class RequestFactory {
 
         request.put(TYPE, CUSTOMER_ENTITY);
         request.put(ACTION, RESERVE_FLIGHT);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(CUSTOMER_ID, cid);
         request.put(FLIGHT_NUMBER, flightNum);
 
@@ -216,7 +216,7 @@ public class RequestFactory {
 
         request.put(TYPE, CUSTOMER_ENTITY);
         request.put(ACTION, RESERVE_CARS);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(CUSTOMER_ID, cid);
         request.put(CAR_LOCATION, location);
 
@@ -228,7 +228,7 @@ public class RequestFactory {
 
         request.put(TYPE, CUSTOMER_ENTITY);
         request.put(ACTION, RESERVE_ROOMS);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(CUSTOMER_ID, cid);
         request.put(ROOM_LOCATION, location);
 
@@ -242,13 +242,39 @@ public class RequestFactory {
 
         request.put(TYPE, CUSTOMER_ENTITY);
         request.put(ACTION, BUNDLE);
-        request.put(CUSTOMER_XID, xid);
+        request.put(XID, xid);
         request.put(CUSTOMER_ID, cid);
         request.put(FLIGHT_NUMBERS, new JSONArray(flightNumbers));
         request.put(ROOM_LOCATION, location);
         request.put(BOOK_CAR, bookCar);
         request.put(BOOK_ROOM, bookRoom);
 
+        return request;
+    }
+
+    public static JSONObject getNewTransactionRequest() throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, TRANSACTION);
+        request.put(ACTION, NEW_TRANSACTION);
+        return request;
+    }
+
+    public static JSONObject getCommitRequest(int xid) throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, TRANSACTION);
+        request.put(ACTION, COMMIT);
+        request.put(XID, xid);
+        return request;
+    }
+
+    public static JSONObject getAbortRequest(int xid) throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, TRANSACTION);
+        request.put(ACTION, ABORT);
+        request.put(XID, xid);
         return request;
     }
 }

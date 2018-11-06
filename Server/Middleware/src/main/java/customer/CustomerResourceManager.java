@@ -19,14 +19,14 @@ public class CustomerResourceManager extends ResourceManager {
 
     // Reserve an item
     protected boolean reserveItem(int xid, int customerID, String key, String location, int price) {
-        Customer customer = (Customer) readData(xid, Customer.getKey(customerID));
+        Customer customer = (Customer) transactionManager.readCommittedData(xid, Customer.getKey(customerID));
         if (customer == null) {
             Trace.warn("RM::reserveItem(" + xid + ", " + customerID + ", " + key + ", " + location + ")  failed--customer doesn't exist");
             return false;
         }
         // since this method will only be called once
         customer.reserve(key, location, price);
-        writeData(xid, customer.getKey(), customer);
+        transactionManager.commitData(xid, customer.getKey(), customer);
 
         Trace.info("RM::reserveItem(" + xid + ", " + customerID + ", " + key + ", " + location + ") succeeded");
         return true;
@@ -35,13 +35,13 @@ public class CustomerResourceManager extends ResourceManager {
     @Override
     public boolean deleteCustomer(int xid, int customerID) {
         Trace.info("RM::deleteCustomer(" + xid + ", " + customerID + ") called");
-        Customer customer = (Customer) readData(xid, Customer.getKey(customerID));
+        Customer customer = (Customer) transactionManager.readCommittedData(xid, Customer.getKey(customerID));
         if (customer == null) {
             Trace.warn("RM::deleteCustomer(" + xid + ", " + customerID + ") failed--customer doesn't exist");
             return false;
         } else {
             // Remove the customer from the storage
-            removeData(xid, customer.getKey());
+            transactionManager.removeData(xid, customer.getKey());
             Trace.info("RM::deleteCustomer(" + xid + ", " + customerID + ") succeeded");
             return true;
         }

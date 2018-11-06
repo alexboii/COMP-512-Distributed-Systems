@@ -17,6 +17,7 @@ public class GeneralConstants {
     public static final String FLIGHT_ENTITY = "flights";
     public static final String CAR_ENTITY = "cars";
     public static final String CUSTOMER_ENTITY = "customer";
+    public static final String TRANSACTION = "transaction";
 
     //CAR
     public static final String ADD_CARS = "AddCars";
@@ -56,7 +57,6 @@ public class GeneralConstants {
     public static final String ROOM_PRICE = "price";
 
     //CUSTOMER
-    public static final String CUSTOMER_XID = "xid";
     public static final String CUSTOMER_ID = "customerId";
 
     public static final String NEW_CUSTOMER = "AddCustomer";
@@ -69,6 +69,13 @@ public class GeneralConstants {
     public static final String FLIGHT_NUMBERS = "flightNumbers";
     public static final String BOOK_CAR = "bookCar";
     public static final String BOOK_ROOM = "bookFlight";
+
+    //TRANSACTION
+    public static final String XID = "xid";
+    public static final String NEW_TRANSACTION = "NewTransaction";
+    public static final String COMMIT = "Commit";
+    public static final String SHOULD_ABORT = "ShouldAbort";
+    public static final String ABORT = "Abort";
 
 
 }

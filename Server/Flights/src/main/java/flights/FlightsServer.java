@@ -77,7 +77,7 @@ public class FlightsServer extends ResourceManager implements IServer {
                 break;
 
             case NEW_CUSTOMER:
-                xid = request.getInt(CUSTOMER_XID);
+                xid = request.getInt(XID);
 
                 res = newCustomer(xid);
 
@@ -85,7 +85,7 @@ public class FlightsServer extends ResourceManager implements IServer {
                 break;
 
             case NEW_CUSTOMER_ID:
-                xid = request.getInt(CUSTOMER_XID);
+                xid = request.getInt(XID);
                 customerId = request.getInt(CUSTOMER_ID);
 
                 result = newCustomer(xid, customerId);
@@ -94,10 +94,22 @@ public class FlightsServer extends ResourceManager implements IServer {
                 break;
 
             case DELETE_CUSTOMER:
-                xid = request.getInt(CUSTOMER_XID);
+                xid = request.getInt(XID);
                 customerId = request.getInt(CUSTOMER_ID);
                 result = deleteCustomer(xid, customerId);
 
+                sendReply(writer, result);
+                break;
+
+            case COMMIT:
+                xid = request.getInt(XID);
+                result = commit(xid);
+                sendReply(writer, result);
+                break;
+
+            case ABORT:
+                xid = request.getInt(XID);
+                result = abort(xid);
                 sendReply(writer, result);
                 break;
         }

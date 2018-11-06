@@ -3,6 +3,7 @@ package client;
 public enum Command {
 	Help("List all available commands", "[CommandName]"),
 
+	Start("Start a new transaction", ""),
 	AddFlight("Add a new flight number", "<xid>,<FlightNumber>,<NumberOfSeats>,<PricePerSeat>"),
 	AddCars("Add a new car location", "<xid>,<Location>,<NumberOfCar>,<Price>"),
 	AddRooms("Add a new room location", "<xid>,<Location>,<NumberOfRoom>,<Price>"),
@@ -28,6 +29,9 @@ public enum Command {
 	ReserveRoom("Reserve a room for a customer at a location", "<xid>,<CustomerID>,<Location>"),
 
 	Bundle("Book N flight numbers, and optionally a room and/or car at a location", "<xid>,<CustomerID>,<FlightNumber1>...<FlightNumberN>,<Location>,<Car-Y/N>,<Room-Y/N>"),
+
+	Commit("Commit the transaction", "<xid>"),
+	Abort("Abort the transaction", "<xid>"),
 
 	Quit("Exit the client application", "");
 
