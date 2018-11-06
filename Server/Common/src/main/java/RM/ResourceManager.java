@@ -27,7 +27,7 @@ abstract public class ResourceManager implements IResourceManager {
     }
 
     // Query the number of available seats/rooms/cars
-    protected int queryNumTransaction(int xid, String key) throws DeadlockException {
+    protected int queryNum(int xid, String key) throws DeadlockException {
         logger.info("RM::queryNum(" + xid + ", " + key + ") called");
         ReservableItem curObj = (ReservableItem) transactionManager.readDataTransaction(xid, key);
         int value = 0;
@@ -38,7 +38,7 @@ abstract public class ResourceManager implements IResourceManager {
         return value;
     }
 
-    protected int queryPriceTransaction(int xid, String key) throws DeadlockException {
+    protected int queryPrice(int xid, String key) throws DeadlockException {
         logger.info("RM::queryPrice(" + xid + ", " + key + ") called");
         ReservableItem curObj = (ReservableItem) transactionManager.readDataTransaction(xid, key);
         int value = 0;
@@ -49,7 +49,7 @@ abstract public class ResourceManager implements IResourceManager {
         return value;
     }
 
-    protected boolean reserveItemTransaction(int xid, int customerID, String key, String location) throws DeadlockException {
+    protected boolean reserveItem(int xid, int customerID, String key, String location) throws DeadlockException {
         logger.info("RM::reserveItem(" + xid + ", customer=" + customerID + ", " + key + ", " + location + ") called");
         // Read customer object if it exists (and read lock it)
         Customer customer = (Customer) transactionManager.readDataTransaction(xid, Customer.getKey(customerID));
@@ -68,68 +68,12 @@ abstract public class ResourceManager implements IResourceManager {
             return false;
         } else {
             customer.reserve(key, location, item.getPrice());
-            transactionManager.writeDataLocally(xid, customer.getKey(), customer);
+            transactionManager.writeDataTransaction(xid, customer.getKey(), customer);
 
             // Decrease the number of available items in the storage
             item.setCount(item.getCount() - 1);
             item.setReserved(item.getReserved() + 1);
-            transactionManager.writeDataLocally(xid, item.getKey(), item);
-
-            logger.info("RM::reserveItem(" + xid + ", " + customerID + ", " + key + ", " + location + ") succeeded");
-            return true;
-        }
-    }
-
-    // Query the number of available seats/rooms/cars
-    protected int queryNum(int xid, String key) {
-        logger.info("RM::queryNum(" + xid + ", " + key + ") called");
-        ReservableItem curObj = (ReservableItem) transactionManager.readCommittedData(xid, key);
-        int value = 0;
-        if (curObj != null) {
-            value = curObj.getCount();
-        }
-        logger.info("RM::queryNum(" + xid + ", " + key + ") returns count=" + value);
-        return value;
-    }
-
-    // Query the price of an item
-    protected int queryPrice(int xid, String key) {
-        logger.info("RM::queryPrice(" + xid + ", " + key + ") called");
-        ReservableItem curObj = (ReservableItem) transactionManager.readCommittedData(xid, key);
-        int value = 0;
-        if (curObj != null) {
-            value = curObj.getPrice();
-        }
-        logger.info("RM::queryPrice(" + xid + ", " + key + ") returns cost=$" + value);
-        return value;
-    }
-
-    // Reserve an item
-    protected boolean reserveItem(int xid, int customerID, String key, String location) {
-        logger.info("RM::reserveItem(" + xid + ", customer=" + customerID + ", " + key + ", " + location + ") called");
-        // Read customer object if it exists (and read lock it)
-        Customer customer = (Customer) transactionManager.readCommittedData(xid, Customer.getKey(customerID));
-        if (customer == null) {
-            logger.warning("RM::reserveItem(" + xid + ", " + customerID + ", " + key + ", " + location + ")  failed--customer doesn't exist");
-            return false;
-        }
-
-        // Check if the item is available
-        ReservableItem item = (ReservableItem) transactionManager.readCommittedData(xid, key);
-        if (item == null) {
-            logger.warning("RM::reserveItem(" + xid + ", " + customerID + ", " + key + ", " + location + ") failed--item doesn't exist");
-            return false;
-        } else if (item.getCount() == 0) {
-            logger.warning("RM::reserveItem(" + xid + ", " + customerID + ", " + key + ", " + location + ") failed--No more items");
-            return false;
-        } else {
-            customer.reserve(key, location, item.getPrice());
-            transactionManager.commitData(xid, customer.getKey(), customer);
-
-            // Decrease the number of available items in the storage
-            item.setCount(item.getCount() - 1);
-            item.setReserved(item.getReserved() + 1);
-            transactionManager.commitData(xid, item.getKey(), item);
+            transactionManager.writeDataTransaction(xid, item.getKey(), item);
 
             logger.info("RM::reserveItem(" + xid + ", " + customerID + ", " + key + ", " + location + ") succeeded");
             return true;
@@ -138,13 +82,13 @@ abstract public class ResourceManager implements IResourceManager {
 
     // Create a new flight, or add seats to existing flight
     // NOTE: if flightPrice <= 0 and the flight already exists, it maintains its current price
-    public boolean addFlight(int xid, int flightNum, int flightSeats, int flightPrice) {
+    public boolean addFlight(int xid, int flightNum, int flightSeats, int flightPrice) throws DeadlockException {
         logger.info("RM::addFlight(" + xid + ", " + flightNum + ", " + flightSeats + ", $" + flightPrice + ") called");
-        Flight curObj = (Flight) transactionManager.readCommittedData(xid, Flight.getKey(flightNum));
+        Flight curObj = (Flight) transactionManager.readDataTransaction(xid, Flight.getKey(flightNum));
         if (curObj == null) {
             // Doesn't exist yet, add it
             Flight newObj = new Flight(flightNum, flightSeats, flightPrice);
-            transactionManager.commitData(xid, newObj.getKey(), newObj);
+            transactionManager.writeDataTransaction(xid, newObj.getKey(), newObj);
             logger.info("RM::addFlight(" + xid + ") created new flight " + flightNum + ", seats=" + flightSeats + ", price=$" + flightPrice);
         } else {
             // Add seats to existing flight and update the price if greater than zero
@@ -152,7 +96,7 @@ abstract public class ResourceManager implements IResourceManager {
             if (flightPrice > 0) {
                 curObj.setPrice(flightPrice);
             }
-            transactionManager.commitData(xid, curObj.getKey(), curObj);
+            transactionManager.writeDataTransaction(xid, curObj.getKey(), curObj);
             logger.info("RM::addFlight(" + xid + ") modified existing flight " + flightNum + ", seats=" + curObj.getCount() + ", price=$" + flightPrice);
         }
         return true;
@@ -169,7 +113,7 @@ abstract public class ResourceManager implements IResourceManager {
             // Car location doesn't exist yet, add it
             Car newObj = new Car(location, count, price);
 
-            transactionManager.writeDataLocally(xid, newObj.getKey(), newObj);
+            transactionManager.writeDataTransaction(xid, newObj.getKey(), newObj);
             logger.info("RM::addCars(" + xid + ") created new location " + location + ", count=" + count + ", price=$" + price);
         } else {
             // Add count to existing car location and update price if greater than zero
@@ -177,7 +121,7 @@ abstract public class ResourceManager implements IResourceManager {
             if (price > 0) {
                 carObj.setPrice(price);
             }
-            transactionManager.writeDataLocally(xid, carObj.getKey(), carObj);
+            transactionManager.writeDataTransaction(xid, carObj.getKey(), carObj);
             logger.info("RM::addCars(" + xid + ") modified existing location " + location + ", count=" + carObj.getCount() + ", price=$" + price);
         }
         return true;
@@ -185,13 +129,13 @@ abstract public class ResourceManager implements IResourceManager {
 
     // Create a new room location or add rooms to an existing location
     // NOTE: if price <= 0 and the room location already exists, it maintains its current price
-    public boolean addRooms(int xid, String location, int count, int price) {
+    public boolean addRooms(int xid, String location, int count, int price) throws DeadlockException {
         logger.info("RM::addRooms(" + xid + ", " + location + ", " + count + ", $" + price + ") called");
-        Room curObj = (Room) transactionManager.readCommittedData(xid, Room.getKey(location));
+        Room curObj = (Room) transactionManager.readDataTransaction(xid, Room.getKey(location));
         if (curObj == null) {
             // Room location doesn't exist yet, add it
             Room newObj = new Room(location, count, price);
-            transactionManager.commitData(xid, newObj.getKey(), newObj);
+            transactionManager.writeDataTransaction(xid, newObj.getKey(), newObj);
             logger.info("RM::addRooms(" + xid + ") created new room location " + location + ", count=" + count + ", price=$" + price);
         } else {
             // Add count to existing object and update price if greater than zero
@@ -199,15 +143,15 @@ abstract public class ResourceManager implements IResourceManager {
             if (price > 0) {
                 curObj.setPrice(price);
             }
-            transactionManager.commitData(xid, curObj.getKey(), curObj);
+            transactionManager.writeDataTransaction(xid, curObj.getKey(), curObj);
             logger.info("RM::addRooms(" + xid + ") modified existing location " + location + ", count=" + curObj.getCount() + ", price=$" + price);
         }
         return true;
     }
 
     // Deletes flight
-    public boolean deleteFlight(int xid, int flightNum) {
-        return transactionManager.deleteItem(xid, Flight.getKey(flightNum));
+    public boolean deleteFlight(int xid, int flightNum) throws DeadlockException {
+        return transactionManager.deleteItemTransaction(xid, Flight.getKey(flightNum));
     }
 
     // Delete cars at a location
@@ -216,46 +160,72 @@ abstract public class ResourceManager implements IResourceManager {
     }
 
     // Delete rooms at a location
-    public boolean deleteRooms(int xid, String location) {
-        return transactionManager.deleteItem(xid, Room.getKey(location));
+    public boolean deleteRooms(int xid, String location) throws DeadlockException {
+        return transactionManager.deleteItemTransaction(xid, Room.getKey(location));
     }
 
     // Returns the number of empty seats in this flight
-    public int queryFlight(int xid, int flightNum) {
+    public int queryFlight(int xid, int flightNum) throws DeadlockException {
         return queryNum(xid, Flight.getKey(flightNum));
     }
 
     // Returns the number of cars available at a location
     public int queryCars(int xid, String location) throws DeadlockException {
-        return queryNumTransaction(xid, Car.getKey(location));
+        return queryNum(xid, Car.getKey(location));
     }
 
     // Returns the amount of rooms available at a location
-    public int queryRooms(int xid, String location) {
+    public int queryRooms(int xid, String location) throws DeadlockException {
         return queryNum(xid, Room.getKey(location));
     }
 
     // Returns price of a seat in this flight
-    public int queryFlightPrice(int xid, int flightNum) {
+    public int queryFlightPrice(int xid, int flightNum) throws DeadlockException {
         return queryPrice(xid, Flight.getKey(flightNum));
     }
 
     // Returns price of cars at this location
     public int queryCarsPrice(int xid, String location) throws DeadlockException {
-        return queryPriceTransaction(xid, Car.getKey(location));
+        return queryPrice(xid, Car.getKey(location));
     }
 
     // Returns room price at this location
-    public int queryRoomsPrice(int xid, String location) {
+    public int queryRoomsPrice(int xid, String location) throws DeadlockException {
         return queryPrice(xid, Room.getKey(location));
     }
 
-    public boolean newCustomerTransaction(int xid, int customerID) throws DeadlockException {
+    public String queryCustomerInfo(int xid, int customerID) throws DeadlockException {
+        logger.info("RM::queryCustomerInfo(" + xid + ", " + customerID + ") called");
+        Customer customer = (Customer) transactionManager.readDataTransaction(xid, Customer.getKey(customerID));
+        if (customer == null) {
+            logger.warning("RM::queryCustomerInfo(" + xid + ", " + customerID + ") failed--customer doesn't exist");
+            // NOTE: don't change this--WC counts on this value indicating a customer does not exist...
+            return "";
+        } else {
+            logger.info("RM::queryCustomerInfo(" + xid + ", " + customerID + ")");
+            logger.info(customer.getBill());
+            return customer.getBill();
+        }
+    }
+
+    public int newCustomer(int xid) throws DeadlockException {
+        logger.info("RM::newCustomer(" + xid + ") called");
+        // Generate a globally unique ID for the new customer
+        int cid = Integer.parseInt(String.valueOf(xid) +
+                String.valueOf(Calendar.getInstance().get(Calendar.MILLISECOND)) +
+                String.valueOf(Math.round(Math.random() * 100 + 1)));
+        Customer customer = new Customer(cid);
+        transactionManager.writeDataTransaction(xid, customer.getKey(), customer);
+        logger.info("RM::newCustomer(" + cid + ") returns ID=" + cid);
+        return cid;
+    }
+
+    public boolean newCustomer(int xid, int customerID) throws DeadlockException {
         logger.info("RM::newCustomer(" + xid + ", " + customerID + ") called");
         Customer customer = (Customer) transactionManager.readDataTransaction(xid, Customer.getKey(customerID));
         if (customer == null) {
             customer = new Customer(customerID);
-            transactionManager.writeDataLocally(xid, customer.getKey(), customer);
+            transactionManager.writeDataTransaction(xid, customer.getKey(), customer);
             logger.info("RM::newCustomer(" + xid + ", " + customerID + ") created a new customer");
             return true;
         } else {
@@ -264,7 +234,7 @@ abstract public class ResourceManager implements IResourceManager {
         }
     }
 
-    public boolean deleteCustomerTransaction(int xid, int customerID) throws DeadlockException {
+    public boolean deleteCustomer(int xid, int customerID) throws DeadlockException {
         logger.info("RM::deleteCustomer(" + xid + ", " + customerID + ") called");
         Customer customer = (Customer) transactionManager.readDataTransaction(xid, Customer.getKey(customerID));
         if (customer == null) {
@@ -280,7 +250,7 @@ abstract public class ResourceManager implements IResourceManager {
                 logger.info("RM::deleteCustomer(" + xid + ", " + customerID + ") has reserved " + reserveditem.getKey() + " which is reserved " + item.getReserved() + " times and is still available " + item.getCount() + " times");
                 item.setReserved(item.getReserved() - reserveditem.getCount());
                 item.setCount(item.getCount() + reserveditem.getCount());
-                transactionManager.writeDataLocally(xid, item.getKey(), item);
+                transactionManager.writeDataTransaction(xid, item.getKey(), item);
             }
 
             // Remove the customer from the storage
@@ -290,84 +260,18 @@ abstract public class ResourceManager implements IResourceManager {
         }
     }
 
-    public String queryCustomerInfo(int xid, int customerID) {
-        logger.info("RM::queryCustomerInfo(" + xid + ", " + customerID + ") called");
-        Customer customer = (Customer) transactionManager.readCommittedData(xid, Customer.getKey(customerID));
-        if (customer == null) {
-            logger.warning("RM::queryCustomerInfo(" + xid + ", " + customerID + ") failed--customer doesn't exist");
-            // NOTE: don't change this--WC counts on this value indicating a customer does not exist...
-            return "";
-        } else {
-            logger.info("RM::queryCustomerInfo(" + xid + ", " + customerID + ")");
-            logger.info(customer.getBill());
-            return customer.getBill();
-        }
-    }
-
-    public int newCustomer(int xid) {
-        logger.info("RM::newCustomer(" + xid + ") called");
-        // Generate a globally unique ID for the new customer
-        int cid = Integer.parseInt(String.valueOf(xid) +
-                String.valueOf(Calendar.getInstance().get(Calendar.MILLISECOND)) +
-                String.valueOf(Math.round(Math.random() * 100 + 1)));
-        Customer customer = new Customer(cid);
-        transactionManager.commitData(xid, customer.getKey(), customer);
-        logger.info("RM::newCustomer(" + cid + ") returns ID=" + cid);
-        return cid;
-    }
-
-    public boolean newCustomer(int xid, int customerID) {
-        logger.info("RM::newCustomer(" + xid + ", " + customerID + ") called");
-        Customer customer = (Customer) transactionManager.readCommittedData(xid, Customer.getKey(customerID));
-        if (customer == null) {
-            customer = new Customer(customerID);
-            transactionManager.commitData(xid, customer.getKey(), customer);
-            logger.info("RM::newCustomer(" + xid + ", " + customerID + ") created a new customer");
-            return true;
-        } else {
-            logger.info("INFO: RM::newCustomer(" + xid + ", " + customerID + ") failed--customer already exists");
-            return false;
-        }
-    }
-
-    public boolean deleteCustomer(int xid, int customerID) {
-        logger.info("RM::deleteCustomer(" + xid + ", " + customerID + ") called");
-        Customer customer = (Customer) transactionManager.readCommittedData(xid, Customer.getKey(customerID));
-        if (customer == null) {
-            logger.warning("RM::deleteCustomer(" + xid + ", " + customerID + ") failed--customer doesn't exist");
-            return false;
-        } else {
-            // Increase the reserved numbers of all reservable items which the customer reserved.
-            RMHashMap reservations = customer.getReservations();
-            for (String reservedKey : reservations.keySet()) {
-                ReservedItem reserveditem = customer.getReservedItem(reservedKey);
-                logger.info("RM::deleteCustomer(" + xid + ", " + customerID + ") has reserved " + reserveditem.getKey() + " " + reserveditem.getCount() + " times");
-                ReservableItem item = (ReservableItem) transactionManager.readCommittedData(xid, reserveditem.getKey());
-                logger.info("RM::deleteCustomer(" + xid + ", " + customerID + ") has reserved " + reserveditem.getKey() + " which is reserved " + item.getReserved() + " times and is still available " + item.getCount() + " times");
-                item.setReserved(item.getReserved() - reserveditem.getCount());
-                item.setCount(item.getCount() + reserveditem.getCount());
-                transactionManager.commitData(xid, item.getKey(), item);
-            }
-
-            // Remove the customer from the storage
-            transactionManager.removeData(xid, customer.getKey());
-            logger.info("RM::deleteCustomer(" + xid + ", " + customerID + ") succeeded");
-            return true;
-        }
-    }
-
     // Adds flight reservation to this customer
-    public boolean reserveFlight(int xid, int customerID, int flightNum) {
+    public boolean reserveFlight(int xid, int customerID, int flightNum) throws DeadlockException {
         return reserveItem(xid, customerID, Flight.getKey(flightNum), String.valueOf(flightNum));
     }
 
     // Adds car reservation to this customer
     public boolean reserveCar(int xid, int customerID, String location) throws DeadlockException {
-        return reserveItemTransaction(xid, customerID, Car.getKey(location), location);
+        return reserveItem(xid, customerID, Car.getKey(location), location);
     }
 
     // Adds room reservation to this customer
-    public boolean reserveRoom(int xid, int customerID, String location) {
+    public boolean reserveRoom(int xid, int customerID, String location) throws DeadlockException {
         return reserveItem(xid, customerID, Room.getKey(location), location);
     }
 

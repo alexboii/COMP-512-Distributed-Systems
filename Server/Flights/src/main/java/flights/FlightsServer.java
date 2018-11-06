@@ -1,14 +1,17 @@
 package flights;
 
 import Constants.ServerConstants;
+import LockManager.DeadlockException;
 import RM.ResourceManager;
 import Tcp.IServer;
 import Tcp.SocketUtils;
+import Utilities.FileLogger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
 import static Tcp.SocketUtils.sendReply;
@@ -21,6 +24,8 @@ public class FlightsServer extends ResourceManager implements IServer {
     private static final String serverName = "Flights";
     private static final int maxConcurrentClients = 10;
 
+    private static final Logger logger = FileLogger.getLogger(FlightsServer.class);
+
     public FlightsServer() {
         super(serverName);
     }
@@ -32,6 +37,11 @@ public class FlightsServer extends ResourceManager implements IServer {
 
     @Override
     public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
+
+        boolean result = false;
+        boolean abort = false;
+        int res = 0;
+
         switch ((String) request.get(ACTION)) {
             case ADD_FLIGHTS:
                 int xid = request.getInt(FLIGHT_XID);
@@ -39,32 +49,52 @@ public class FlightsServer extends ResourceManager implements IServer {
                 int count = request.getInt(FLIGHT_SEATS);
                 int price = request.getInt(FLIGHT_PRICE);
 
-                boolean result = addFlight(xid, number, count, price);
-                sendReply(writer, result);
+                try {
+                    result = addFlight(xid, number, count, price);
+                } catch (DeadlockException e) {
+                    logger.info(e.toString());
+                    abort = true;
+                }
+                sendReply(writer, result, abort);
                 break;
 
             case DELETE_FLIGHTS:
                 xid = request.getInt(FLIGHT_XID);
                 number = request.getInt(FLIGHT_NUMBER);
 
-                result = deleteFlight(xid, number);
-                sendReply(writer, result);
+                try {
+                    result = deleteFlight(xid, number);
+                } catch (DeadlockException e) {
+                    logger.info(e.toString());
+                    abort = true;
+                }
+                sendReply(writer, result, abort);
                 break;
 
             case QUERY_FLIGHTS:
                 xid = request.getInt(FLIGHT_XID);
                 number = request.getInt(FLIGHT_NUMBER);
 
-                int res = queryFlight(xid, number);
-                sendReply(writer, res);
+                try {
+                    res = queryFlight(xid, number);
+                } catch (DeadlockException e) {
+                    logger.info(e.toString());
+                    abort = true;
+                }
+                sendReply(writer, res, abort);
                 break;
 
             case QUERY_FLIGHTS_PRICE:
                 xid = request.getInt(FLIGHT_XID);
                 number = request.getInt(FLIGHT_NUMBER);
 
-                res = queryFlightPrice(xid, number);
-                sendReply(writer, res);
+                try {
+                    res = queryFlightPrice(xid, number);
+                } catch (DeadlockException e) {
+                    logger.info(e.toString());
+                    abort = true;
+                }
+                sendReply(writer, res, abort);
                 break;
 
             case RESERVE_FLIGHT:
@@ -72,33 +102,53 @@ public class FlightsServer extends ResourceManager implements IServer {
                 int customerId = request.getInt(CUSTOMER_ID);
                 number = request.getInt(FLIGHT_NUMBER);
 
-                result = reserveFlight(xid, customerId, number);
-                sendReply(writer, result);
+                try {
+                    result = reserveFlight(xid, customerId, number);
+                } catch (DeadlockException e) {
+                    logger.info(e.toString());
+                    abort = true;
+                }
+                sendReply(writer, result, abort);
                 break;
 
             case NEW_CUSTOMER:
                 xid = request.getInt(XID);
 
-                res = newCustomer(xid);
+                try {
+                    res = newCustomer(xid);
+                } catch (DeadlockException e) {
+                    logger.info(e.toString());
+                    abort = true;
+                }
 
-                sendReply(writer, res);
+                sendReply(writer, res, abort);
                 break;
 
             case NEW_CUSTOMER_ID:
                 xid = request.getInt(XID);
                 customerId = request.getInt(CUSTOMER_ID);
 
-                result = newCustomer(xid, customerId);
+                try {
+                    result = newCustomer(xid, customerId);
+                } catch (DeadlockException e) {
+                    logger.info(e.toString());
+                    abort = true;
+                }
 
-                sendReply(writer, result);
+                sendReply(writer, result, abort);
                 break;
 
             case DELETE_CUSTOMER:
                 xid = request.getInt(XID);
                 customerId = request.getInt(CUSTOMER_ID);
-                result = deleteCustomer(xid, customerId);
+                try {
+                    result = deleteCustomer(xid, customerId);
+                } catch (DeadlockException e) {
+                    logger.info(e.toString());
+                    abort = true;
+                }
 
-                sendReply(writer, result);
+                sendReply(writer, result, abort);
                 break;
 
             case COMMIT:

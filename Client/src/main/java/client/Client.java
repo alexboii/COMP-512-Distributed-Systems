@@ -347,8 +347,9 @@ public abstract class Client {
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
                 checkAbort(result);
-                String bill = result.getString(RESULT);
-                System.out.print("Bill: " + bill);
+                if(result.has(RESULT)){
+                    System.out.print("Bill: " + result.getString(RESULT));
+                }
                 success = true;
                 break;
             }

@@ -109,9 +109,14 @@ public class CarServer extends ResourceManager implements IServer {
             case NEW_CUSTOMER:
                 xid = request.getInt(XID);
 
-                res = newCustomer(xid);
+                try {
+                    res = newCustomer(xid);
+                } catch (DeadlockException e) {
+                    logger.info(e.toString());
+                    abort = true;
+                }
 
-                sendReply(writer, res);
+                sendReply(writer, res, abort);
                 break;
 
             case NEW_CUSTOMER_ID:
@@ -119,7 +124,7 @@ public class CarServer extends ResourceManager implements IServer {
                 customerId = request.getInt(CUSTOMER_ID);
 
                 try {
-                    result = newCustomerTransaction(xid, customerId);
+                    result = newCustomer(xid, customerId);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     abort = true;
@@ -132,7 +137,7 @@ public class CarServer extends ResourceManager implements IServer {
                 xid = request.getInt(XID);
                 customerId = request.getInt(CUSTOMER_ID);
                 try {
-                    result = deleteCustomerTransaction(xid, customerId);
+                    result = deleteCustomer(xid, customerId);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     abort = true;

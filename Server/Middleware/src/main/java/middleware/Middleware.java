@@ -1,6 +1,7 @@
 package middleware;
 
 import Constants.ServerConstants;
+import LockManager.DeadlockException;
 import RM.ResourceManager;
 import Tcp.IServer;
 import Tcp.RequestFactory;
@@ -45,6 +46,8 @@ public class Middleware extends ResourceManager implements IServer {
 
     @Override
     public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
+        boolean boolRes = false;
+        boolean abort = false;
         switch ((String) request.get(TYPE)) {
             // redirection happens here
             case CAR_ENTITY:
@@ -62,36 +65,79 @@ public class Middleware extends ResourceManager implements IServer {
             case CUSTOMER_ENTITY:
                 switch ((String) request.get(ACTION)) {
                     case NEW_CUSTOMER:
-                        int result = newCustomer(request);
-                        sendReply(writer, result);
+                        int result = 0;
+                        try {
+                            result = newCustomer(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            abort = true;
+                        }
+                        sendReply(writer, result, abort);
                         break;
                     case NEW_CUSTOMER_ID:
-                        boolean boolRes = newCustomerId(request);
-                        sendReply(writer, boolRes);
+
+                        try {
+                            boolRes = newCustomerId(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            abort = true;
+                        }
+                        sendReply(writer, boolRes, abort);
                         break;
                     case DELETE_CUSTOMER:
-                        boolRes = deleteCustomer(request);
-                        sendReply(writer, boolRes);
+                        try {
+                            boolRes = deleteCustomer(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            abort = true;
+                        }
+                        sendReply(writer, boolRes, abort);
                         break;
                     case QUERY_CUSTOMER:
-                        String strRes = queryCustomerInfo(request);
-                        sendReply(writer, strRes);
+                        String strRes = null;
+                        try {
+                            strRes = queryCustomerInfo(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            abort = true;
+                        }
+                        sendReply(writer, strRes, abort);
                         break;
                     case RESERVE_CARS:
-                        boolRes = reserveCar(request);
-                        sendReply(writer, boolRes);
+                        try {
+                            boolRes = reserveCar(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            abort = true;
+                        }
+                        sendReply(writer, boolRes, abort);
                         break;
                     case RESERVE_FLIGHT:
-                        boolRes = reserveFlight(request);
-                        sendReply(writer, boolRes);
+                        try {
+                            boolRes = reserveFlight(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            abort = true;
+                        }
+                        sendReply(writer, boolRes, abort);
                         break;
                     case RESERVE_ROOMS:
-                        boolRes = reserveRoom(request);
-                        sendReply(writer, boolRes);
+                        try {
+                            boolRes = reserveRoom(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            abort = true;
+                        }
+                        sendReply(writer, boolRes, abort);
                         break;
                     case BUNDLE:
-                        boolRes = bundle(request);
-                        sendReply(writer, boolRes);
+                        try {
+                            boolRes = bundle(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            abort = true;
+                        }
+                        sendReply(writer, boolRes, abort);
                         break;
                 }
                 break;
@@ -106,17 +152,24 @@ public class Middleware extends ResourceManager implements IServer {
                         break;
 
                     case COMMIT:
-                        boolean boolRes = sendRequestToAllServers(request);
+                        boolRes = sendRequestToAllServers(request) &&
+                                customerManager.commit(request.getInt(XID));
                         sendReply(writer, boolRes);
                         break;
 
                     case ABORT:
-                        boolRes = sendRequestToAllServers(request);
+                        boolRes = abortAll(request.getInt(XID));
                         sendReply(writer, boolRes);
                         break;
                 }
                 break;
         }
+    }
+
+    private boolean abortAll(int xid) throws JSONException {
+        logger.info("Aborting transaction: " + xid);
+        JSONObject abortRequest = RequestFactory.getAbortRequest(xid);
+        return sendRequestToAllServers(abortRequest) && customerManager.abort(xid);
     }
 
     /**
@@ -153,9 +206,7 @@ public class Middleware extends ResourceManager implements IServer {
         }
 
         if(abort){
-            logger.info("Aborting transaction: " + request.getInt(XID));
-            JSONObject abortRequest = RequestFactory.getAbortRequest(request.getInt(XID));
-            sendRequestToAllServers(abortRequest);
+            abortAll(request.getInt(XID));
         }
 
         return result;
@@ -169,7 +220,7 @@ public class Middleware extends ResourceManager implements IServer {
     }
 
 
-    public int newCustomer(JSONObject request) throws JSONException {
+    public int newCustomer(JSONObject request) throws JSONException, DeadlockException {
         int xid = request.getInt(XID);
 
         JSONObject replyCar = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
@@ -194,7 +245,7 @@ public class Middleware extends ResourceManager implements IServer {
         return customerManager.newCustomer(xid) > 0 && replyFlights.getInt(RESULT) > 0 && replyCar.getInt(RESULT) > 0 && replyRooms.getInt(RESULT) > 0 ? 1 : 0;
     }
 
-    public boolean newCustomerId(JSONObject request) throws JSONException {
+    public boolean newCustomerId(JSONObject request) throws JSONException, DeadlockException {
         int xid = request.getInt(XID);
         int cid = request.getInt(CUSTOMER_ID);
 
@@ -219,7 +270,7 @@ public class Middleware extends ResourceManager implements IServer {
         return customerManager.newCustomer(xid, cid) && replyCar.getBoolean(RESULT) && replyFlights.getBoolean(RESULT) && replyRooms.getBoolean(RESULT);
     }
 
-    public boolean deleteCustomer(JSONObject request) throws JSONException {
+    public boolean deleteCustomer(JSONObject request) throws JSONException, DeadlockException {
         int xid = request.getInt(XID);
         int cid = request.getInt(CUSTOMER_ID);
 
@@ -245,7 +296,7 @@ public class Middleware extends ResourceManager implements IServer {
     }
 
 
-    public String queryCustomerInfo(JSONObject request) throws JSONException {
+    public String queryCustomerInfo(JSONObject request) throws JSONException, DeadlockException {
         int xid = request.getInt(XID);
         int cid = request.getInt(CUSTOMER_ID);
 
@@ -253,7 +304,7 @@ public class Middleware extends ResourceManager implements IServer {
     }
 
 
-    public boolean reserveFlight(JSONObject request) throws JSONException {
+    public boolean reserveFlight(JSONObject request) throws JSONException, DeadlockException {
         JSONObject replyFlights = sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
 
         if (replyFlights == null || !replyFlights.getBoolean(RESULT)) {
@@ -282,7 +333,7 @@ public class Middleware extends ResourceManager implements IServer {
         return customerManager.reserveFlight(xid, cid, flightNumber, replyPrice.getInt(RESULT));
     }
 
-    public boolean reserveCar(JSONObject request) throws JSONException {
+    public boolean reserveCar(JSONObject request) throws JSONException, DeadlockException {
         JSONObject replyCar = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
 
         if (replyCar == null || !replyCar.getBoolean(RESULT)) {
@@ -310,7 +361,7 @@ public class Middleware extends ResourceManager implements IServer {
         return customerManager.reserveCar(xid, cid, location, replyPrice.getInt(RESULT));
     }
 
-    public boolean reserveRoom(JSONObject request) throws JSONException {
+    public boolean reserveRoom(JSONObject request) throws JSONException, DeadlockException {
         JSONObject replyRoom = sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
 
         if (replyRoom == null || !replyRoom.getBoolean(RESULT)) {
@@ -338,7 +389,7 @@ public class Middleware extends ResourceManager implements IServer {
         return customerManager.reserveRoom(xid, cid, location, replyPrice.getInt(RESULT));
     }
 
-    public boolean bundle(JSONObject request) throws JSONException {
+    public boolean bundle(JSONObject request) throws JSONException, DeadlockException {
 
         int xid = request.getInt(XID);
         int cid = request.getInt(CUSTOMER_ID);

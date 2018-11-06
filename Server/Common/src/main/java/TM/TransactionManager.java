@@ -31,7 +31,12 @@ public class TransactionManager {
         m_data = new RMHashMap();
     }
 
-    // Reads a data item
+    /**
+     * Reads a data item from global map
+     * @param xid
+     * @param key
+     * @return
+     */
     public ResourceItem readCommittedData(int xid, String key) {
         synchronized (m_data) {
             ResourceItem item = m_data.get(key);
@@ -42,22 +47,29 @@ public class TransactionManager {
         }
     }
 
-    // Writes a data item
-    public void commitData(int xid, String key, ResourceItem value) {
+    /**
+     * Writes a data item to global map
+     * @param key
+     * @param value
+     */
+    public void commitData(String key, ResourceItem value) {
         synchronized (m_data) {
             m_data.put(key, value);
         }
     }
 
-    // Remove the item out of storage
-    public void removeData(int xid, String key) {
+    /**
+     * Remove the item out of global map
+     * @param key
+     */
+    public void removeDataAndCommit(String key) {
         synchronized (m_data) {
             m_data.remove(key);
         }
     }
 
     /**
-     * Reads the transaction's local copy of data first if it is available, otherwise reads the committed copy
+     * Reads data from transaction's local copy. If not available then reads data from the global copy
      * @param xid
      * @param key
      * @return
@@ -76,6 +88,31 @@ public class TransactionManager {
         return readCommittedData(xid, key);
     }
 
+    /**
+     * Writes data to transaction's local copy
+     * @param xid
+     * @param key
+     * @param value
+     * @throws DeadlockException
+     */
+    public void writeDataTransaction(int xid, String key, ResourceItem value) throws DeadlockException {
+        lockManager.Lock(xid, key, TransactionLockObject.LockType.LOCK_WRITE);
+        if(writeSet.get(xid) == null) {
+            writeSet.put(xid, new ConcurrentHashMap<>());
+        }
+        writeSet.get(xid).put(key, value);
+
+        if (deleteSet.get(xid) != null) {
+            deleteSet.get(xid).remove(key);
+        }
+    }
+
+    /**
+     * Removes data from transaction's local copy
+     * @param xid
+     * @param key
+     * @throws DeadlockException
+     */
     public void removeDataTransaction(int xid, String key) throws DeadlockException {
         lockManager.Lock(xid, key, TransactionLockObject.LockType.LOCK_WRITE);
 
@@ -89,26 +126,6 @@ public class TransactionManager {
         deleteSet.get(xid).add(key);
     }
 
-    /**
-     * Writes data to local copy of transaction
-     * @param xid
-     * @param key
-     * @param value
-     * @throws DeadlockException
-     */
-    public void writeDataLocally(int xid, String key, ResourceItem value) throws DeadlockException {
-        lockManager.Lock(xid, key, TransactionLockObject.LockType.LOCK_WRITE);
-        if(writeSet.get(xid) == null) {
-            writeSet.put(xid, new ConcurrentHashMap<>());
-        }
-        writeSet.get(xid).put(key, value);
-
-        if (deleteSet.get(xid) != null) {
-            deleteSet.get(xid).remove(key);
-        }
-    }
-
-    //TODO: using this method for Car only first for testing
     public boolean deleteItemTransaction(int xid, String key) throws DeadlockException {
         logger.info("RM::deleteItem(" + xid + ", " + key + ") called");
         ReservableItem curObj = (ReservableItem) readDataTransaction(xid, key);
@@ -119,25 +136,6 @@ public class TransactionManager {
         } else {
             if (curObj.getReserved() == 0) {
                 removeDataTransaction(xid, curObj.getKey());
-                logger.info("RM::deleteItem(" + xid + ", " + key + ") item deleted");
-                return true;
-            } else {
-                logger.info("RM::deleteItem(" + xid + ", " + key + ") item can't be deleted because some customers have reserved it");
-                return false;
-            }
-        }
-    }
-
-    public boolean deleteItem(int xid, String key) {
-        logger.info("RM::deleteItem(" + xid + ", " + key + ") called");
-        ReservableItem curObj = (ReservableItem) readCommittedData(xid, key);
-        // Check if there is such an item in the storage
-        if (curObj == null) {
-            logger.warning("RM::deleteItem(" + xid + ", " + key + ") failed--item doesn't exist");
-            return false;
-        } else {
-            if (curObj.getReserved() == 0) {
-                removeData(xid, curObj.getKey());
                 logger.info("RM::deleteItem(" + xid + ", " + key + ") item deleted");
                 return true;
             } else {
@@ -158,11 +156,11 @@ public class TransactionManager {
         logger.info("Committing xid: " + xid);
 
         if(writeSet.get(xid) != null) {
-            writeSet.get(xid).forEach((key, value) -> commitData(0, key, value));
+            writeSet.get(xid).forEach((key, value) -> commitData(key, value));
         }
 
         if(deleteSet.get(xid) != null) {
-            deleteSet.get(xid).forEach(key -> removeData(0, key));
+            deleteSet.get(xid).forEach(key -> removeDataAndCommit(key));
         }
 
         clear(xid);
