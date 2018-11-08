@@ -48,8 +48,8 @@ public class ClientThread implements Runnable {
 
 
                 for (int j = 0; j < 20; j++) {
-                    if (!rc.executeRandomCommand(xid, this.client)) {
-
+                    if (rc.executeRandomCommand(xid, this.client)) {
+                        vector.add(0, Command.Abort.toString());
                         this.client.execute(Command.Abort, vector);
                         aborted = true;
 
@@ -61,6 +61,7 @@ public class ClientThread implements Runnable {
                 System.out.println(duration);
 
                 if (!aborted) {
+                    vector.add(0, Command.Commit.toString());
                     this.client.execute(Command.Commit, vector);
                 }
             } catch (JSONException e) {
