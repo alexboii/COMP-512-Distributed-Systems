@@ -35,13 +35,13 @@ public class CarServer extends ResourceManager implements IServer {
     public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
 
         boolean result = false;
-        boolean abort = false;
+        boolean deadlock = false;
         int res = 0;
 
         switch ((String) request.get(ACTION)) {
 
             case ADD_CARS:
-                int xid = request.getInt(CAR_XID);
+                int xid = request.getInt(XID);
                 String location = request.getString(CAR_LOCATION);
                 int count = request.getInt(CAR_COUNT);
                 int price = request.getInt(CAR_PRICE);
@@ -50,50 +50,50 @@ public class CarServer extends ResourceManager implements IServer {
                     result = addCars(xid, location, count, price);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
-                sendReply(writer, result, abort);
+                sendReply(writer, result, deadlock);
                 break;
 
             case DELETE_CARS:
-                xid = request.getInt(CAR_XID);
+                xid = request.getInt(XID);
                 location = request.getString(CAR_LOCATION);
                 try {
                     result = deleteCars(xid, location);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
-                sendReply(writer, result, abort);
+                sendReply(writer, result, deadlock);
                 break;
 
             case QUERY_CARS:
-                xid = request.getInt(CAR_XID);
+                xid = request.getInt(XID);
                 location = request.getString(CAR_LOCATION);
                 try {
                     res = queryCars(xid, location);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
-                sendReply(writer, res, abort);
+                sendReply(writer, res, deadlock);
                 break;
 
             case QUERY_CARS_PRICE:
-                xid = request.getInt(CAR_XID);
+                xid = request.getInt(XID);
                 location = request.getString(CAR_LOCATION);
 
                 try {
                     res = queryCarsPrice(xid, location);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
-                sendReply(writer, res, abort);
+                sendReply(writer, res, deadlock);
                 break;
 
             case RESERVE_CARS:
-                xid = request.getInt(CAR_XID);
+                xid = request.getInt(XID);
                 int customerId = request.getInt(CAR_CUSTOMER_ID);
                 location = request.getString(CAR_LOCATION);
 
@@ -101,9 +101,9 @@ public class CarServer extends ResourceManager implements IServer {
                     result = reserveCar(xid, customerId, location);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
-                sendReply(writer, result, abort);
+                sendReply(writer, result, deadlock);
                 break;
 
             case NEW_CUSTOMER:
@@ -113,10 +113,10 @@ public class CarServer extends ResourceManager implements IServer {
                     res = newCustomer(xid);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
 
-                sendReply(writer, res, abort);
+                sendReply(writer, res, deadlock);
                 break;
 
             case NEW_CUSTOMER_ID:
@@ -127,10 +127,10 @@ public class CarServer extends ResourceManager implements IServer {
                     result = newCustomer(xid, customerId);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
 
-                sendReply(writer, result, abort);
+                sendReply(writer, result, deadlock);
                 break;
 
             case DELETE_CUSTOMER:
@@ -140,10 +140,10 @@ public class CarServer extends ResourceManager implements IServer {
                     result = deleteCustomer(xid, customerId);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
 
-                sendReply(writer, result, abort);
+                sendReply(writer, result, deadlock);
                 break;
 
             case COMMIT:

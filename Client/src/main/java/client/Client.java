@@ -5,12 +5,18 @@ import Tcp.SocketUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.Socket;
-import java.util.*;
-import java.io.*;
+import java.util.StringTokenizer;
+import java.util.Vector;
 
+import Utilities.TransactionAbortException;
+
+import static Constants.GeneralConstants.ABORTED;
 import static Constants.GeneralConstants.RESULT;
-import static Constants.GeneralConstants.SHOULD_ABORT;
 
 public abstract class Client {
     protected Socket middleware;
@@ -49,6 +55,8 @@ public abstract class Client {
                 execute(cmd, arguments);
             } catch (IllegalArgumentException e) {
                 System.err.println((char) 27 + "[31;1mCommand exception: " + (char) 27 + "[0m" + e.getLocalizedMessage());
+            } catch (TransactionAbortException e) {
+                System.err.println((char) 27 + "[31;1mCommand exception: " + (char) 27 + "[0m" + e.getLocalizedMessage());
             } catch (Exception e) {
                 System.err.println((char) 27 + "[31;1mCommand exception: " + (char) 27 + "[0mUncaught exception");
                 e.printStackTrace();
@@ -56,7 +64,7 @@ public abstract class Client {
         }
     }
 
-    public boolean execute(Command cmd, Vector<String> arguments) throws NumberFormatException, JSONException {
+    public boolean execute(Command cmd, Vector<String> arguments) throws NumberFormatException, JSONException, TransactionAbortException {
         boolean success = false;
 
         switch (cmd) {
@@ -97,6 +105,8 @@ public abstract class Client {
 
                 JSONObject request = RequestFactory.getAddFlightRequest(id, flightNum, flightSeats, flightPrice);
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                checkAbort(result);
 
                 if (result.getBoolean(RESULT)) {
                     System.out.println("Flight added");
@@ -555,9 +565,9 @@ public abstract class Client {
         return success;
     }
 
-    private void checkAbort(JSONObject result) throws JSONException {
-        if(result.has(SHOULD_ABORT) && result.getBoolean(SHOULD_ABORT)) {
-            System.out.println("Transaction aborted");
+    private void checkAbort(JSONObject result) throws JSONException, TransactionAbortException {
+        if(result.has(ABORTED) && result.getBoolean(ABORTED)) {
+            throw new TransactionAbortException("Transaction aborted. See server logs.");
         }
     }
 

@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
 import static Tcp.SocketUtils.sendReply;
+import static Tcp.SocketUtils.sendReplyToClient;
 
 public class Middleware extends ResourceManager implements IServer {
     private static final String serverName = "Middleware";
@@ -47,20 +48,36 @@ public class Middleware extends ResourceManager implements IServer {
     @Override
     public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
         boolean boolRes = false;
-        boolean abort = false;
+        boolean aborted = false;
+        JSONObject res = null;
         switch ((String) request.get(TYPE)) {
             // redirection happens here
             case CAR_ENTITY:
-                JSONObject res = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
-                sendReply(writer, res);
+                try {
+                    res = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
+                } catch (DeadlockException e) {
+                    abortAll(request.getInt(XID));
+                    aborted = true;
+                }
+                sendReplyToClient(writer, res, aborted);
                 break;
             case FLIGHT_ENTITY:
-                res = sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
-                sendReply(writer, res);
+                try {
+                    res = sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
+                } catch (DeadlockException e) {
+                    abortAll(request.getInt(XID));
+                    aborted = true;
+                }
+                sendReplyToClient(writer, res, aborted);
                 break;
             case ROOM_ENTITY:
-                res = sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
-                sendReply(writer, res);
+                try {
+                    res = sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
+                } catch (DeadlockException e) {
+                    abortAll(request.getInt(XID));
+                    aborted = true;
+                }
+                sendReplyToClient(writer, res, aborted);
                 break;
             case CUSTOMER_ENTITY:
                 switch ((String) request.get(ACTION)) {
@@ -70,9 +87,9 @@ public class Middleware extends ResourceManager implements IServer {
                             result = newCustomer(request);
                         } catch (DeadlockException e) {
                             abortAll(request.getInt(XID));
-                            abort = true;
+                            aborted = true;
                         }
-                        sendReply(writer, result, abort);
+                        sendReplyToClient(writer, result, aborted);
                         break;
                     case NEW_CUSTOMER_ID:
 
@@ -80,18 +97,18 @@ public class Middleware extends ResourceManager implements IServer {
                             boolRes = newCustomerId(request);
                         } catch (DeadlockException e) {
                             abortAll(request.getInt(XID));
-                            abort = true;
+                            aborted = true;
                         }
-                        sendReply(writer, boolRes, abort);
+                        sendReplyToClient(writer, boolRes, aborted);
                         break;
                     case DELETE_CUSTOMER:
                         try {
                             boolRes = deleteCustomer(request);
                         } catch (DeadlockException e) {
                             abortAll(request.getInt(XID));
-                            abort = true;
+                            aborted = true;
                         }
-                        sendReply(writer, boolRes, abort);
+                        sendReplyToClient(writer, boolRes, aborted);
                         break;
                     case QUERY_CUSTOMER:
                         String strRes = null;
@@ -99,45 +116,45 @@ public class Middleware extends ResourceManager implements IServer {
                             strRes = queryCustomerInfo(request);
                         } catch (DeadlockException e) {
                             abortAll(request.getInt(XID));
-                            abort = true;
+                            aborted = true;
                         }
-                        sendReply(writer, strRes, abort);
+                        sendReplyToClient(writer, strRes, aborted);
                         break;
                     case RESERVE_CARS:
                         try {
                             boolRes = reserveCar(request);
                         } catch (DeadlockException e) {
                             abortAll(request.getInt(XID));
-                            abort = true;
+                            aborted = true;
                         }
-                        sendReply(writer, boolRes, abort);
+                        sendReplyToClient(writer, boolRes, aborted);
                         break;
                     case RESERVE_FLIGHT:
                         try {
                             boolRes = reserveFlight(request);
                         } catch (DeadlockException e) {
                             abortAll(request.getInt(XID));
-                            abort = true;
+                            aborted = true;
                         }
-                        sendReply(writer, boolRes, abort);
+                        sendReply(writer, boolRes, aborted);
                         break;
                     case RESERVE_ROOMS:
                         try {
                             boolRes = reserveRoom(request);
                         } catch (DeadlockException e) {
                             abortAll(request.getInt(XID));
-                            abort = true;
+                            aborted = true;
                         }
-                        sendReply(writer, boolRes, abort);
+                        sendReplyToClient(writer, boolRes, aborted);
                         break;
                     case BUNDLE:
                         try {
                             boolRes = bundle(request);
                         } catch (DeadlockException e) {
                             abortAll(request.getInt(XID));
-                            abort = true;
+                            aborted = true;
                         }
-                        sendReply(writer, boolRes, abort);
+                        sendReplyToClient(writer, boolRes, aborted);
                         break;
                 }
                 break;
@@ -172,6 +189,20 @@ public class Middleware extends ResourceManager implements IServer {
         return sendRequestToAllServers(abortRequest) && customerManager.abort(xid);
     }
 
+    private boolean sendRequestToAllServers(JSONObject request) throws JSONException {
+        logger.info("Sending request to all servers. " + request);
+        boolean result = false;
+        try {
+            result = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request).getBoolean(RESULT) &&
+                    sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request).getBoolean(RESULT) &&
+                    sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request).getBoolean(RESULT);
+        } catch (DeadlockException e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
     /**
      * Routing happens here
      *
@@ -180,12 +211,12 @@ public class Middleware extends ResourceManager implements IServer {
      * @param request
      * @return
      */
-    private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request) throws JSONException {
+    private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request) throws JSONException, DeadlockException {
         JSONObject result = null;
         boolean abort = false;
 
         try {
-            logger.info("Sending request " + request + "to server: " + serverAddress + ":" + port);
+            logger.info("Sending request " + request + " to server: " + serverAddress + ":" + port);
             Socket server = new Socket(InetAddress.getByName(serverAddress), port);
             OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
             BufferedReader reader = new BufferedReader(new InputStreamReader(server.getInputStream(), CHAR_SET));
@@ -194,31 +225,20 @@ public class Middleware extends ResourceManager implements IServer {
 
             result = SocketUtils.sendAndReceive(request, writer, reader);
 
-            if(result.has(SHOULD_ABORT)) {
-                abort = result.getBoolean(SHOULD_ABORT);
-            }
-
             server.close();
             writer.close();
             reader.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 
-        if(abort){
-            abortAll(request.getInt(XID));
+            if(result.has(DEADLOCK) && result.getBoolean(DEADLOCK)) {
+                throw new DeadlockException(request.getInt(XID), "");
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         return result;
     }
-
-    private boolean sendRequestToAllServers(JSONObject request) throws JSONException {
-        logger.info("Sending request to all servers. " + request);
-        return sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request).getBoolean(RESULT) &&
-                sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request).getBoolean(RESULT) &&
-                sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request).getBoolean(RESULT);
-    }
-
 
     public int newCustomer(JSONObject request) throws JSONException, DeadlockException {
         int xid = request.getInt(XID);

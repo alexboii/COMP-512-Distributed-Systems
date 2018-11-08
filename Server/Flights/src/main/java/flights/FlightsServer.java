@@ -39,12 +39,12 @@ public class FlightsServer extends ResourceManager implements IServer {
     public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
 
         boolean result = false;
-        boolean abort = false;
+        boolean deadlock = false;
         int res = 0;
 
         switch ((String) request.get(ACTION)) {
             case ADD_FLIGHTS:
-                int xid = request.getInt(FLIGHT_XID);
+                int xid = request.getInt(XID);
                 int number = request.getInt(FLIGHT_NUMBER);
                 int count = request.getInt(FLIGHT_SEATS);
                 int price = request.getInt(FLIGHT_PRICE);
@@ -53,52 +53,52 @@ public class FlightsServer extends ResourceManager implements IServer {
                     result = addFlight(xid, number, count, price);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
-                sendReply(writer, result, abort);
+                sendReply(writer, result, deadlock);
                 break;
 
             case DELETE_FLIGHTS:
-                xid = request.getInt(FLIGHT_XID);
+                xid = request.getInt(XID);
                 number = request.getInt(FLIGHT_NUMBER);
 
                 try {
                     result = deleteFlight(xid, number);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
-                sendReply(writer, result, abort);
+                sendReply(writer, result, deadlock);
                 break;
 
             case QUERY_FLIGHTS:
-                xid = request.getInt(FLIGHT_XID);
+                xid = request.getInt(XID);
                 number = request.getInt(FLIGHT_NUMBER);
 
                 try {
                     res = queryFlight(xid, number);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
-                sendReply(writer, res, abort);
+                sendReply(writer, res, deadlock);
                 break;
 
             case QUERY_FLIGHTS_PRICE:
-                xid = request.getInt(FLIGHT_XID);
+                xid = request.getInt(XID);
                 number = request.getInt(FLIGHT_NUMBER);
 
                 try {
                     res = queryFlightPrice(xid, number);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
-                sendReply(writer, res, abort);
+                sendReply(writer, res, deadlock);
                 break;
 
             case RESERVE_FLIGHT:
-                xid = request.getInt(FLIGHT_XID);
+                xid = request.getInt(XID);
                 int customerId = request.getInt(CUSTOMER_ID);
                 number = request.getInt(FLIGHT_NUMBER);
 
@@ -106,9 +106,9 @@ public class FlightsServer extends ResourceManager implements IServer {
                     result = reserveFlight(xid, customerId, number);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
-                sendReply(writer, result, abort);
+                sendReply(writer, result, deadlock);
                 break;
 
             case NEW_CUSTOMER:
@@ -118,10 +118,10 @@ public class FlightsServer extends ResourceManager implements IServer {
                     res = newCustomer(xid);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
 
-                sendReply(writer, res, abort);
+                sendReply(writer, res, deadlock);
                 break;
 
             case NEW_CUSTOMER_ID:
@@ -132,10 +132,10 @@ public class FlightsServer extends ResourceManager implements IServer {
                     result = newCustomer(xid, customerId);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
 
-                sendReply(writer, result, abort);
+                sendReply(writer, result, deadlock);
                 break;
 
             case DELETE_CUSTOMER:
@@ -145,10 +145,10 @@ public class FlightsServer extends ResourceManager implements IServer {
                     result = deleteCustomer(xid, customerId);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
-                    abort = true;
+                    deadlock = true;
                 }
 
-                sendReply(writer, result, abort);
+                sendReply(writer, result, deadlock);
                 break;
 
             case COMMIT:

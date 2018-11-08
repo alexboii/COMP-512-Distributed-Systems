@@ -26,7 +26,6 @@ public class GeneralConstants {
     public static final String QUERY_CARS_PRICE = "QueryCarsPrice";
     public static final String RESERVE_CARS = "ReserveCars";
 
-    public static final String CAR_XID = "xid";
     public static final String CAR_LOCATION = "location";
     public static final String CAR_COUNT = "count";
     public static final String CAR_PRICE = "price";
@@ -38,7 +37,6 @@ public class GeneralConstants {
     public static final String QUERY_FLIGHTS = "QueryFlight";
     public static final String QUERY_FLIGHTS_PRICE = "QueryFlightPrice";
     public static final String RESERVE_FLIGHT = "ReserveFlight";
-    public static final String FLIGHT_XID = "xid";
     public static final String FLIGHT_NUMBER = "flightNumber";
     public static final String FLIGHT_SEATS = "seats";
     public static final String FLIGHT_PRICE = "price";
@@ -51,7 +49,6 @@ public class GeneralConstants {
     public static final String QUERY_ROOMS_PRICE = "QueryRoomsPrice";
     public static final String RESERVE_ROOMS = "ReserveRooms";
 
-    public static final String ROOM_XID = "xid";
     public static final String ROOM_LOCATION = "location";
     public static final String ROOM_COUNT = "count";
     public static final String ROOM_PRICE = "price";
@@ -74,8 +71,8 @@ public class GeneralConstants {
     public static final String XID = "xid";
     public static final String NEW_TRANSACTION = "NewTransaction";
     public static final String COMMIT = "Commit";
-    public static final String SHOULD_ABORT = "ShouldAbort";
+    public static final String DEADLOCK = "Deadlock";
+    public static final String ABORTED = "Aborted";
     public static final String ABORT = "Abort";
-
 
 }

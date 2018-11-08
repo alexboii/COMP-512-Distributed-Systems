@@ -2,7 +2,6 @@ package TM;
 
 import LockManager.LockManager;
 import Model.RMHashMap;
-import Model.ReservableItem;
 import Model.ResourceItem;
 import Utilities.FileLogger;
 import LockManager.*;
@@ -124,25 +123,6 @@ public class TransactionManager {
             deleteSet.put(xid, ConcurrentHashMap.newKeySet());
         }
         deleteSet.get(xid).add(key);
-    }
-
-    public boolean deleteItemTransaction(int xid, String key) throws DeadlockException {
-        logger.info("RM::deleteItem(" + xid + ", " + key + ") called");
-        ReservableItem curObj = (ReservableItem) readDataTransaction(xid, key);
-        // Check if there is such an item in the storage
-        if (curObj == null) {
-            logger.warning("RM::deleteItem(" + xid + ", " + key + ") failed--item doesn't exist");
-            return false;
-        } else {
-            if (curObj.getReserved() == 0) {
-                removeDataTransaction(xid, curObj.getKey());
-                logger.info("RM::deleteItem(" + xid + ", " + key + ") item deleted");
-                return true;
-            } else {
-                logger.info("RM::deleteItem(" + xid + ", " + key + ") item can't be deleted because some customers have reserved it");
-                return false;
-            }
-        }
     }
 
     public boolean abort(int xid) {

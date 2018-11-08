@@ -80,6 +80,25 @@ abstract public class ResourceManager implements IResourceManager {
         }
     }
 
+    public boolean deleteItemTransaction(int xid, String key) throws DeadlockException {
+        logger.info("RM::deleteItem(" + xid + ", " + key + ") called");
+        ReservableItem curObj = (ReservableItem) transactionManager.readDataTransaction(xid, key);
+        // Check if there is such an item in the storage
+        if (curObj == null) {
+            logger.warning("RM::deleteItem(" + xid + ", " + key + ") failed--item doesn't exist");
+            return false;
+        } else {
+            if (curObj.getReserved() == 0) {
+                transactionManager.removeDataTransaction(xid, curObj.getKey());
+                logger.info("RM::deleteItem(" + xid + ", " + key + ") item deleted");
+                return true;
+            } else {
+                logger.info("RM::deleteItem(" + xid + ", " + key + ") item can't be deleted because some customers have reserved it");
+                return false;
+            }
+        }
+    }
+
     // Create a new flight, or add seats to existing flight
     // NOTE: if flightPrice <= 0 and the flight already exists, it maintains its current price
     public boolean addFlight(int xid, int flightNum, int flightSeats, int flightPrice) throws DeadlockException {
@@ -151,17 +170,17 @@ abstract public class ResourceManager implements IResourceManager {
 
     // Deletes flight
     public boolean deleteFlight(int xid, int flightNum) throws DeadlockException {
-        return transactionManager.deleteItemTransaction(xid, Flight.getKey(flightNum));
+        return deleteItemTransaction(xid, Flight.getKey(flightNum));
     }
 
     // Delete cars at a location
     public boolean deleteCars(int xid, String location) throws DeadlockException{
-        return transactionManager.deleteItemTransaction(xid, Car.getKey(location));
+        return deleteItemTransaction(xid, Car.getKey(location));
     }
 
     // Delete rooms at a location
     public boolean deleteRooms(int xid, String location) throws DeadlockException {
-        return transactionManager.deleteItemTransaction(xid, Room.getKey(location));
+        return deleteItemTransaction(xid, Room.getKey(location));
     }
 
     // Returns the number of empty seats in this flight

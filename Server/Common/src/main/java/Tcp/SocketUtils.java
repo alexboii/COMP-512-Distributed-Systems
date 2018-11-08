@@ -15,7 +15,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
-import static Constants.GeneralConstants.SHOULD_ABORT;
+import static Constants.GeneralConstants.ABORTED;
+import static Constants.GeneralConstants.DEADLOCK;
 import static Constants.GeneralConstants.RESULT;
 
 public class SocketUtils {
@@ -52,19 +53,36 @@ public class SocketUtils {
         return;
     }
 
-    public static <I> void sendReply(OutputStreamWriter writer, I result, boolean abort) throws IOException, JSONException {
+    public static <I> void sendReply(OutputStreamWriter writer, I result, boolean deadlock) throws IOException, JSONException {
         JSONObject reply = new JSONObject();
         reply.put(RESULT, result);
-        reply.put(SHOULD_ABORT, abort);
+        if(deadlock) {
+            reply.put(DEADLOCK, deadlock);
+        }
         logger.info("Sending back reply: " + reply);
         writer.write(reply.toString() + "\n");
         writer.flush();
         return;
     }
 
-    public static void sendReply(OutputStreamWriter writer, JSONObject result) throws IOException, JSONException {
-        logger.info("Sending back reply: " + result);
+    public static void sendReplyToClient(OutputStreamWriter writer, JSONObject result, boolean aborted) throws IOException, JSONException {
+        if(aborted){
+            result.put(ABORTED, aborted);
+        }
+        logger.info("Sending back reply to client: " + result);
         writer.write(result.toString() + "\n");
+        writer.flush();
+        return;
+    }
+
+    public static <I> void sendReplyToClient(OutputStreamWriter writer, I result, boolean aborted) throws IOException, JSONException {
+        JSONObject reply = new JSONObject();
+        reply.put(RESULT, result);
+        if(aborted) {
+            reply.put(ABORTED, aborted);
+        }
+        logger.info("Sending back reply to client: " + reply);
+        writer.write(reply.toString() + "\n");
         writer.flush();
         return;
     }
