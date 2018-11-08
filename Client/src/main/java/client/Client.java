@@ -60,6 +60,9 @@ public abstract class Client {
         boolean success = false;
 
         JSONObject result = null;
+
+        System.out.println("Executing" + cmd.toString() + " " + arguments.toString() + " -- " + arguments.size());
+
         switch (cmd) {
             case Help: {
                 if (arguments.size() == 1) {
