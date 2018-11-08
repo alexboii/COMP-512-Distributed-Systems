@@ -1,2 +1,3 @@
 customer/CustomerResourceManager.class
 middleware/Middleware.class
+transaction/XIDManager.class

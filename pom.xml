@@ -15,6 +15,7 @@
         <module>Server/Flights</module>
         <module>Server/Middleware</module>
         <module>Server/Rooms</module>
+        <module>Performance</module>
         <module>Client</module>
     </modules>
 

@@ -71,8 +71,13 @@ public class SocketUtils {
 
 
     public static JSONObject sendAndReceive(JSONObject request, OutputStreamWriter writer, BufferedReader reader) {
+        System.out.println(request);
+
         try {
+            System.out.println(request.toString() );
+
             writer.write(request.toString() + "\n");
+
             writer.flush();
 
             String line = reader.readLine();
