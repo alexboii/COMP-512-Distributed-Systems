@@ -1,7 +1,7 @@
-import client.TCPClient;
+package performance;
+
 import com.github.javafaker.Faker;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

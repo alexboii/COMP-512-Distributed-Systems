@@ -32,5 +32,9 @@
         </dependency>
     </dependencies>
 
+    <properties>
+        <skip.assembly>false</skip.assembly>
+        <main.class>performance.PerformanceClient</main.class>
+    </properties>
 
 </project>
