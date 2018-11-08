@@ -45,7 +45,6 @@ public class RandomCommand {
             "ReserveFlight",
             "ReserveCar",
             "ReserveRoom",
-            "Bundle",
     };
 
     public RandomCommand(ArrayList<String> fakeCities, ArrayList<Integer> fakeIds) {
