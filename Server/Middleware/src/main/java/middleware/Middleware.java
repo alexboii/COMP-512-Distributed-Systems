@@ -49,6 +49,9 @@ public class Middleware extends ResourceManager implements IServer {
 
     @Override
     public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
+
+        logger.info("Received request " + request);
+
         boolean boolRes = false;
         boolean aborted = false;
         JSONObject res = null;
@@ -170,7 +173,6 @@ public class Middleware extends ResourceManager implements IServer {
                 break;
 
             case TRANSACTION:
-
                 switch ((String) request.get(ACTION)) {
 
                     case NEW_TRANSACTION:
@@ -186,6 +188,18 @@ public class Middleware extends ResourceManager implements IServer {
                     case ABORT:
                         abortAll(request.getInt(XID));
                         sendReply(writer, true);
+                        break;
+                }
+                break;
+
+            case OTHERS:
+                switch ((String) request.get(ACTION)) {
+                    case SHUTDOWN:
+                        sendRequest(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
+                        sendRequest(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
+                        sendRequest(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
+                        logger.info("Shutting down");
+                        System.exit(0);
                         break;
                 }
                 break;

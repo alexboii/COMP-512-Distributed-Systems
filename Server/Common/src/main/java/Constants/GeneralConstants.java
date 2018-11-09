@@ -18,6 +18,7 @@ public class GeneralConstants {
     public static final String CAR_ENTITY = "cars";
     public static final String CUSTOMER_ENTITY = "customer";
     public static final String TRANSACTION = "transaction";
+    public static final String OTHERS = "others";
 
     //CAR
     public static final String ADD_CARS = "AddCars";
@@ -75,5 +76,8 @@ public class GeneralConstants {
     public static final String ABORTED = "Aborted";
     public static final String ABORT = "Abort";
     public static final String VALID_XID = "ValidXid";
+
+    //SHUTDOWN
+    public static final String SHUTDOWN = "Shutdown";
 
 }

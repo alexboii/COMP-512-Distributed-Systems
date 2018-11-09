@@ -566,6 +566,13 @@ public abstract class Client {
                 }
                 break;
             }
+            case Shutdown: {
+                checkArgumentsCount(1, arguments.size());
+                System.out.println("Shutting down all servers");
+                JSONObject request = RequestFactory.getShutdownRequest();
+                SocketUtils.send(request, middlewareWriter);
+                break;
+            }
 
         }
         return success;

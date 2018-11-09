@@ -14,18 +14,12 @@ import static Constants.GeneralConstants.CHAR_SET;
 public class TCPClient extends Client {
     private static String s_serverHost = ServerConstants.MIDDLEWARE_SERVER_ADDRESS;
     private static int s_serverPort = ServerConstants.MIDDLEWARE_PORT;
-    private static String s_serverName = ServerConstants.MIDDLEWARE_PREFIX;
-
-    //TODO: REPLACE 'ALEX' WITH YOUR GROUP NUMBER TO COMPILE
-    private static String s_rmiPrefix = "group01";
 
     public static void main(String args[]) {
         if (args.length > 0) {
             s_serverHost = args[0];
         }
-        if (args.length > 1) {
-            s_serverName = args[1];
-        }
+
         if (args.length > 2) {
             System.err.println((char) 27 + "[31;1mClient exception: " + (char) 27 + "[0mUsage: java client.client.TCPClient [server_hostname [server_rmiobject]]");
             System.exit(1);

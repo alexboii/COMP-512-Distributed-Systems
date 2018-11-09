@@ -277,5 +277,13 @@ public class RequestFactory {
         request.put(XID, xid);
         return request;
     }
+
+    public static JSONObject getShutdownRequest() throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, OTHERS);
+        request.put(ACTION, SHUTDOWN);
+        return request;
+    }
 }
 

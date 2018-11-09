@@ -94,7 +94,7 @@ public class SocketUtils {
             writer.flush();
 
             String line = reader.readLine();
-            logger.info("Reply from server: " + line + "\n");
+            logger.info("Reply from server: " + line);
             JSONObject reply = new JSONObject(line);
             return reply;
         } catch (IOException | JSONException e) {

@@ -38,6 +38,8 @@ public class RoomsServer extends ResourceManager implements IServer {
     @Override
     public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
 
+        logger.info("Received request " + request);
+
         boolean result = false;
         boolean deadlock = false;
         int res = 0;
@@ -161,6 +163,11 @@ public class RoomsServer extends ResourceManager implements IServer {
             case ABORT:
                 xid = request.getInt(XID);
                 abort(xid);
+                break;
+
+            case SHUTDOWN:
+                logger.info("Shutting down");
+                System.exit(0);
                 break;
         }
     }
