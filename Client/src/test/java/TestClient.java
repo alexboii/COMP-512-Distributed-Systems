@@ -1,3 +1,4 @@
+import Utilities.InvalidTransactionException;
 import Utilities.TransactionAbortException;
 import client.Command;
 import client.TCPClient;
@@ -15,44 +16,48 @@ import static org.hamcrest.CoreMatchers.containsString;
 @Ignore
 public class TestClient {
 
+    //TODO: Get XIDs from output of Start
+
     @Test
-    public void flightReservationTest() throws JSONException, IOException {
+    public void flightReservationTest() throws JSONException, IOException, InvalidTransactionException {
 
         TCPClient testClient = new TCPClient();
         testClient.connectServer();
 
         try {
+            execute("Start", testClient);
+
             //add flight
-            String command = "AddFlight,1,22001,100,950";
+            String command = "AddFlight,0,22001,100,950";
             boolean result = execute(command, testClient);
             Assert.assertTrue(result);
 
             LoggedPrintStream lpsOut = LoggedPrintStream.create(System.out);
             System.setOut(lpsOut);
-            command = "QueryFlight,1,22001";
+            command = "QueryFlight,0,22001";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
             Assert.assertThat(lpsOut.buf.toString(), containsString("Number of seats available: 100"));
 
-            command = "AddCustomerID,1,90";
+            command = "AddCustomerID,0,90";
             execute(command, testClient);
 
             //make reservation
-            command = "ReserveFlight,1,90,22001";
+            command = "ReserveFlight,0,90,22001";
             result = execute(command, testClient);
             Assert.assertTrue(result);
 
             //verify reservation successful
             System.setOut(lpsOut);
-            command = "QueryCustomer,1,90";
+            command = "QueryCustomer,0,90";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
             Assert.assertThat(lpsOut.buf.toString(), containsString("$950"));
 
             System.setOut(lpsOut);
-            command = "QueryFlight,1,22001";
+            command = "QueryFlight,0,22001";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
@@ -61,7 +66,7 @@ public class TestClient {
             //clean up TODO: delete reservation
             //execute("DeleteCustomer,1,234", testClient);
             //execute("DeleteFlight,1,2200", testClient);
-            execute("Commit,1", testClient);
+            execute("Commit,0", testClient);
         } catch (TransactionAbortException e) {
             e.printStackTrace();
         }
@@ -69,40 +74,42 @@ public class TestClient {
     }
 
     @Test
-    public void carReservationTest() throws JSONException, IOException {
+    public void carReservationTest() throws JSONException, IOException, InvalidTransactionException {
 
         TCPClient testClient = new TCPClient();
         testClient.connectServer();
 
         try{
-            String command = "AddCars,223,plas,5,100";
+            execute("Start", testClient);
+
+            String command = "AddCars,1,plas,5,100";
             boolean result = execute(command, testClient);
             Assert.assertTrue(result);
 
             LoggedPrintStream lpsOut = LoggedPrintStream.create(System.out);
             System.setOut(lpsOut);
-            command = "QueryCars,223,plas";
+            command = "QueryCars,1,plas";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
             Assert.assertThat(lpsOut.buf.toString(), containsString("Number of cars at this location: 5"));
 
-            command = "AddCustomerID,223,45";
+            command = "AddCustomerID,1,45";
             execute(command, testClient);
 
-            command = "ReserveCar,223,45,plas";
+            command = "ReserveCar,1,45,plas";
             result = execute(command, testClient);
             Assert.assertTrue(result);
 
             System.setOut(lpsOut);
-            command = "QueryCustomer,223,45";
+            command = "QueryCustomer,1,45";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
             Assert.assertThat(lpsOut.buf.toString(), containsString("$100"));
 
             System.setOut(lpsOut);
-            command = "QueryCars,223,plas";
+            command = "QueryCars,1,plas";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
@@ -111,7 +118,7 @@ public class TestClient {
             //clean up TODO: delete reservation
             //execute("DeleteCustomer,223,234", testClient);
             //execute("DeleteCars,223,plas", testClient);
-            execute("Commit,223", testClient);
+            execute("Commit,1", testClient);
         } catch (TransactionAbortException e) {
             e.printStackTrace();
         }
@@ -120,40 +127,42 @@ public class TestClient {
     }
 
     @Test
-    public void roomReservationTest() throws JSONException, IOException {
+    public void roomReservationTest() throws JSONException, IOException, InvalidTransactionException {
 
         TCPClient testClient = new TCPClient();
         testClient.connectServer();
 
         try {
-            String command = "AddRooms,65,chicago,25,130";
+            execute("Start", testClient);
+
+            String command = "AddRooms,2,chicago,25,130";
             boolean result = execute(command, testClient);
             Assert.assertTrue(result);
 
             LoggedPrintStream lpsOut = LoggedPrintStream.create(System.out);
             System.setOut(lpsOut);
-            command = "QueryRoomsPrice,65,chicago";
+            command = "QueryRoomsPrice,2,chicago";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
             Assert.assertThat(lpsOut.buf.toString(), containsString("Price of rooms at this location: 130"));
 
-            command = "AddCustomerID,65,234";
+            command = "AddCustomerID,2,234";
             execute(command, testClient);
 
-            command = "ReserveRoom,65,234,chicago";
+            command = "ReserveRoom,2,234,chicago";
             result = execute(command, testClient);
             Assert.assertTrue(result);
 
             System.setOut(lpsOut);
-            command = "QueryRooms,65,chicago";
+            command = "QueryRooms,2,chicago";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
             Assert.assertThat(lpsOut.buf.toString(), containsString("Number of rooms at this location: 24"));
 
             System.setOut(lpsOut);
-            command = "QueryCustomer,65,234";
+            command = "QueryCustomer,2,234";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
@@ -162,7 +171,7 @@ public class TestClient {
             //clean up TODO: delete reservation
             //execute("DeleteCustomer,65,234", testClient);
             //execute("DeleteRooms,65,chicago", testClient);
-            execute("Abort,65", testClient);
+            execute("Abort,2", testClient);
 
         } catch (TransactionAbortException e) {
             e.printStackTrace();
@@ -171,42 +180,44 @@ public class TestClient {
     }
 
     @Test
-    public void bundleReservationTest() throws JSONException, IOException {
+    public void bundleReservationTest() throws JSONException, IOException, InvalidTransactionException {
 
         TCPClient testClient = new TCPClient();
         testClient.connectServer();
 
         try{
+            execute("Start", testClient);
+
             //add two flights, rooms and cars
-            String command = "AddFlight,2,2200,100,950";
+            String command = "AddFlight,3,2200,100,950";
             boolean result = execute(command, testClient);
             Assert.assertTrue(result);
 
-            command = "AddFlight,2,2300,100,850";
+            command = "AddFlight,3,2300,100,850";
             result = execute(command, testClient);
             Assert.assertTrue(result);
 
-            command = "AddCars,2,ny,5,100";
+            command = "AddCars,3,ny,5,100";
             result = execute(command, testClient);
             Assert.assertTrue(result);
 
-            command = "AddRooms,2,ny,25,130";
+            command = "AddRooms,3,ny,25,130";
             result = execute(command, testClient);
             Assert.assertTrue(result);
 
             //add customer
-            command = "AddCustomerID,2,22";
+            command = "AddCustomerID,3,22";
             execute(command, testClient);
 
 
             //make reservation in bundle
-            command = "Bundle,2,22,2200,2300,ny,true,true";
+            command = "Bundle,3,22,2200,2300,ny,true,true";
             result = execute(command, testClient);
             Assert.assertTrue(result);
 
             LoggedPrintStream lpsOut = LoggedPrintStream.create(System.out);
             System.setOut(lpsOut);
-            command = "QueryCustomer,2,22";
+            command = "QueryCustomer,3,22";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
@@ -218,21 +229,21 @@ public class TestClient {
             //verify reservation successfully made
 
             System.setOut(lpsOut);
-            command = "QueryFlight,2,2200";
+            command = "QueryFlight,3,2200";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
             Assert.assertThat(lpsOut.buf.toString(), containsString("Number of seats available: 99"));
 
             System.setOut(lpsOut);
-            command = "QueryCars,2,ny";
+            command = "QueryCars,3,ny";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
             Assert.assertThat(lpsOut.buf.toString(), containsString("Number of cars at this location: 4"));
 
             System.setOut(lpsOut);
-            command = "QueryRooms,2,ny";
+            command = "QueryRooms,3,ny";
             result = execute(command, testClient);
             Assert.assertTrue(result);
             System.setOut(lpsOut.underlying);
@@ -245,7 +256,7 @@ public class TestClient {
             //execute("DeleteFlight,2,2300", testClient);
             //execute("DeleteCars,2,ny", testClient);
             //execute("DeleteRooms,2,ny", testClient);
-            execute("Commit,2", testClient);
+            execute("Commit,3", testClient);
 
         } catch (TransactionAbortException e) {
             e.printStackTrace();
@@ -258,18 +269,24 @@ public class TestClient {
         TCPClient testClient = new TCPClient();
         testClient.connectServer();
         try {
+            execute("Start", testClient);
+
             String command = "Help";
 
             boolean result = execute(command, testClient);
             Assert.assertTrue(result);
+
+            execute("Commit,4", testClient);
         } catch (TransactionAbortException e) {
+            e.printStackTrace();
+        } catch (InvalidTransactionException e) {
             e.printStackTrace();
         }
 
         testClient.destroyConnection();
     }
 
-    private boolean execute(String command, TCPClient testClient) throws JSONException, TransactionAbortException {
+    private boolean execute(String command, TCPClient testClient) throws JSONException, TransactionAbortException, InvalidTransactionException {
         Vector<String> arguments = parse(command);
         Command cmd = Command.fromString(arguments.elementAt(0));
 

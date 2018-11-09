@@ -50,6 +50,14 @@ public class Middleware extends ResourceManager implements IServer {
         boolean boolRes = false;
         boolean aborted = false;
         JSONObject res = null;
+
+        if(!xIDManager.validate(request)){
+            JSONObject reply = new JSONObject();
+            reply.put(VALID_XID, false);
+            sendReplyToClient(writer, reply, false);
+            return;
+        }
+
         switch ((String) request.get(TYPE)) {
             // redirection happens here
             case CAR_ENTITY:
@@ -169,8 +177,7 @@ public class Middleware extends ResourceManager implements IServer {
                         break;
 
                     case COMMIT:
-                        boolRes = sendRequestToAllServers(request) &&
-                                customerManager.commit(request.getInt(XID));
+                        boolRes = commitAll(request);
                         sendReply(writer, boolRes);
                         break;
 
@@ -183,9 +190,15 @@ public class Middleware extends ResourceManager implements IServer {
         }
     }
 
+    private boolean commitAll(JSONObject commitRequest) throws JSONException {
+        xIDManager.completeTransaction(commitRequest.getInt(XID));
+        return sendRequestToAllServers(commitRequest) && customerManager.commit(commitRequest.getInt(XID));
+    }
+
     private boolean abortAll(int xid) throws JSONException {
         logger.info("Aborting transaction: " + xid);
         JSONObject abortRequest = RequestFactory.getAbortRequest(xid);
+        xIDManager.completeTransaction(xid);
         return sendRequestToAllServers(abortRequest) && customerManager.abort(xid);
     }
 

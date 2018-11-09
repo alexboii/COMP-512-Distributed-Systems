@@ -74,5 +74,6 @@ public class GeneralConstants {
     public static final String DEADLOCK = "Deadlock";
     public static final String ABORTED = "Aborted";
     public static final String ABORT = "Abort";
+    public static final String VALID_XID = "ValidXid";
 
 }
