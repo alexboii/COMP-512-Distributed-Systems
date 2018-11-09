@@ -31,14 +31,6 @@ public class ClientThread implements Runnable {
         this.client.connectServer();
 
         for (int i = 0; i < load; i++) {
-            long wait = random.nextInt(this.period) * 2;
-
-            try {
-                Thread.sleep(wait);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
             long start = System.currentTimeMillis();
             try {
                 int xid = this.client.startTransaction();
@@ -63,6 +55,17 @@ public class ClientThread implements Runnable {
                 if (!aborted) {
                     vector.add(0, Command.Commit.toString());
                     this.client.execute(Command.Commit, vector);
+                }
+
+                // introduce uniform variation
+                long wait = (this.period + random.nextInt(5 - (-5)) - 5) - duration;
+
+                if (wait > 0) {
+                    try {
+                        Thread.sleep(wait);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             } catch (JSONException e) {
                 e.printStackTrace();

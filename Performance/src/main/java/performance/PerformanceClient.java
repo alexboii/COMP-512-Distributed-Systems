@@ -11,8 +11,8 @@ import java.util.concurrent.TimeUnit;
  * Created by alex on 11/7/18.
  */
 public class PerformanceClient {
-    public static int NUM_CLIENTS = 1;
-    public static int LOAD = 1;
+    public static int NUM_CLIENTS = 4;
+    public static int LOAD = 100;
     public static int PERIOD = (int) (((1.0 / LOAD) * 1000) * NUM_CLIENTS);
 
     public static void main(String args[]) {
@@ -27,12 +27,12 @@ public class PerformanceClient {
         System.out.println("Period" + PERIOD);
 
         // add at most 10 random cities
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 5000; i++) {
             fakeCities.add(faker.address().cityName());
         }
 
-        for (int i = 0; i < 3; i++) {
-            fakeIds.add(faker.random().nextInt(200));
+        for (int i = 0; i < 5000; i++) {
+            fakeIds.add(faker.random().nextInt(10000));
         }
 
         RandomCommand rc = new RandomCommand(fakeCities, fakeIds);
