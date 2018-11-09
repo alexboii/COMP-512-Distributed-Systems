@@ -2,8 +2,10 @@ package performance;
 
 import client.Command;
 import client.TCPClient;
+import org.apache.commons.csv.CSVPrinter;
 import org.json.JSONException;
 
+import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Vector;
 
@@ -17,13 +19,15 @@ public class ClientThread implements Runnable {
     private int period;
     private RandomCommand rc;
     private int load;
+    private CSVPrinter csvPrinter;
 
-    public ClientThread(int period, RandomCommand rc, int load) {
+    public ClientThread(int period, RandomCommand rc, int load, CSVPrinter csvPrinter) {
         this.client = new TCPClient();
 
         this.period = period;
         this.rc = rc;
         this.load = load;
+        this.csvPrinter = csvPrinter;
     }
 
     @Override
@@ -52,6 +56,15 @@ public class ClientThread implements Runnable {
                 long duration = System.currentTimeMillis() - start;
                 System.out.println("DURATION" + duration);
 
+                synchronized(csvPrinter) {
+                    csvPrinter.printRecord(duration);
+                    try {
+                        csvPrinter.flush();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
                 if (!aborted) {
                     vector.add(0, Command.Commit.toString());
                     this.client.execute(Command.Commit, vector);
@@ -68,6 +81,8 @@ public class ClientThread implements Runnable {
                     }
                 }
             } catch (JSONException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
