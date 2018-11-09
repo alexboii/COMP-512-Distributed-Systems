@@ -104,6 +104,15 @@ public class SocketUtils {
         return null;
     }
 
+    public static void send(JSONObject request, OutputStreamWriter writer) {
+        try {
+            writer.write(request.toString() + "\n");
+            writer.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void startServerConnection(String address, int port, int maxConcurrentClients, IResourceManager rm){
         try {
             ServerSocket server = createServerSocket(address, port);

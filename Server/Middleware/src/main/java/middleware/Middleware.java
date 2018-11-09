@@ -19,9 +19,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
+import static Constants.ServerConstants.MIDDLEWARE_SERVER_ADDRESS;
 import static Tcp.SocketUtils.sendReply;
 import static Tcp.SocketUtils.sendReplyToClient;
 
@@ -177,43 +179,43 @@ public class Middleware extends ResourceManager implements IServer {
                         break;
 
                     case COMMIT:
-                        boolRes = commitAll(request);
-                        sendReply(writer, boolRes);
+                        commitAll(request);
+                        sendReply(writer, true);
                         break;
 
                     case ABORT:
-                        boolRes = abortAll(request.getInt(XID));
-                        sendReply(writer, boolRes);
+                        abortAll(request.getInt(XID));
+                        sendReply(writer, true);
                         break;
                 }
                 break;
         }
     }
 
-    private boolean commitAll(JSONObject commitRequest) throws JSONException {
-        xIDManager.completeTransaction(commitRequest.getInt(XID));
-        return sendRequestToAllServers(commitRequest) && customerManager.commit(commitRequest.getInt(XID));
+    private void commitAll(JSONObject commitRequest) throws JSONException {
+        int xid = commitRequest.getInt(XID);
+        logger.info("Committing transaction: " + xid);
+        Set<String> rms = xIDManager.completeTransaction(xid);
+        sendRequestToRMs(commitRequest, rms);
+        customerManager.commit(xid);
     }
 
-    private boolean abortAll(int xid) throws JSONException {
+    private void abortAll(int xid) throws JSONException {
         logger.info("Aborting transaction: " + xid);
         JSONObject abortRequest = RequestFactory.getAbortRequest(xid);
-        xIDManager.completeTransaction(xid);
-        return sendRequestToAllServers(abortRequest) && customerManager.abort(xid);
+        Set<String> rms = xIDManager.completeTransaction(xid);
+        sendRequestToRMs(abortRequest, rms);
+        customerManager.abort(xid);
     }
 
-    private boolean sendRequestToAllServers(JSONObject request) throws JSONException {
-        logger.info("Sending request to all servers. " + request);
-        boolean result = false;
-        try {
-            result = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request).getBoolean(RESULT) &&
-                    sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request).getBoolean(RESULT) &&
-                    sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request).getBoolean(RESULT);
-        } catch (DeadlockException e) {
-            e.printStackTrace();
-        }
-
-        return result;
+    private void sendRequestToRMs(JSONObject request, Set<String> rms) {
+        logger.info("Sending request to resource managers.");
+        rms.forEach(rm -> {
+            String[] hostPort = rm.split(":");
+            String host = hostPort[0];
+            int port = Integer.parseInt(hostPort[1]);
+            sendRequest(host, port, request);
+        });
     }
 
     /**
@@ -226,15 +228,14 @@ public class Middleware extends ResourceManager implements IServer {
      */
     private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request) throws JSONException, DeadlockException {
         JSONObject result = null;
-        boolean abort = false;
+        int xid = request.getInt(XID);
+        xIDManager.addRM(xid, serverAddress+":"+port);
 
         try {
             logger.info("Sending request " + request + " to server: " + serverAddress + ":" + port);
             Socket server = new Socket(InetAddress.getByName(serverAddress), port);
             OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
             BufferedReader reader = new BufferedReader(new InputStreamReader(server.getInputStream(), CHAR_SET));
-
-            logger.info("Successfully sent request " + request + "to server: " + serverAddress + ":" + port);
 
             result = SocketUtils.sendAndReceive(request, writer, reader);
 
@@ -243,7 +244,7 @@ public class Middleware extends ResourceManager implements IServer {
             reader.close();
 
             if(result.has(DEADLOCK) && result.getBoolean(DEADLOCK)) {
-                throw new DeadlockException(request.getInt(XID), "");
+                throw new DeadlockException(xid, "");
             }
 
         } catch (IOException e) {
@@ -251,6 +252,23 @@ public class Middleware extends ResourceManager implements IServer {
         }
 
         return result;
+    }
+
+    private void sendRequest(String serverAddress, int port, JSONObject request) {
+
+        try {
+            logger.info("Sending request " + request + " to server: " + serverAddress + ":" + port);
+            Socket server = new Socket(InetAddress.getByName(serverAddress), port);
+            OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
+
+            SocketUtils.send(request, writer);
+
+            server.close();
+            writer.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public int newCustomer(JSONObject request) throws JSONException, DeadlockException {
@@ -472,6 +490,6 @@ public class Middleware extends ResourceManager implements IServer {
 
     @Override
     public void start(int port) {
-        SocketUtils.startServerConnection(ServerConstants.MIDDLEWARE_SERVER_ADDRESS, port, maxConcurrentClients, this);
+        SocketUtils.startServerConnection(MIDDLEWARE_SERVER_ADDRESS, port, maxConcurrentClients, this);
     }
 }

@@ -155,14 +155,12 @@ public class RoomsServer extends ResourceManager implements IServer {
 
             case COMMIT:
                 xid = request.getInt(XID);
-                result = commit(xid);
-                sendReply(writer, result);
+                commit(xid);
                 break;
 
             case ABORT:
                 xid = request.getInt(XID);
-                result = abort(xid);
-                sendReply(writer, result);
+                abort(xid);
                 break;
         }
     }

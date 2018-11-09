@@ -303,12 +303,12 @@ abstract public class ResourceManager implements IResourceManager {
         return m_name;
     }
 
-    public boolean abort(int id) {
-        return transactionManager.abort(id);
+    public void commit(int id) {
+        transactionManager.commit(id);
     }
 
-    public boolean commit(int id) {
-        return transactionManager.commit(id);
+    public void abort(int id) {
+        transactionManager.abort(id);
     }
 }
 

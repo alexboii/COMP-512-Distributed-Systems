@@ -4,10 +4,6 @@ package Constants;
  * Created by alex on 9/25/18.
  */
 public class ServerConstants {
-    public static final String CUSTOMER_PREFIX = "Customer";
-    public static final String CAR_PREFIX = "Cars_" + GeneralConstants.groupPrefix;
-    public static final String FLIGHTS_PREFIX = "Flights_" + GeneralConstants.groupPrefix;
-    public static final String ROOMS_PREFIX = "Rooms_" + GeneralConstants.groupPrefix;
     public static final String MIDDLEWARE_PREFIX = "Middleware_" + GeneralConstants.groupPrefix;
     public static final String CAR_SERVER_ADDRESS = "lab2-31.cs.mcgill.ca";
     public static final String FLIGHTS_SERVER_ADDRESS = "lab2-32.cs.mcgill.ca";

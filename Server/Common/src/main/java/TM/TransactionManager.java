@@ -125,13 +125,7 @@ public class TransactionManager {
         deleteSet.get(xid).add(key);
     }
 
-    public boolean abort(int xid) {
-        logger.info("Aborting xid: " + xid);
-        clear(xid);
-        return true;
-    }
-
-    public boolean commit(int xid) {
+    public void commit(int xid) {
 
         logger.info("Committing xid: " + xid);
 
@@ -144,8 +138,11 @@ public class TransactionManager {
         }
 
         clear(xid);
-        return true;
+    }
 
+    public void abort(int xid) {
+        logger.info("Aborting xid: " + xid);
+        clear(xid);
     }
 
     private void clear(int xid) {
