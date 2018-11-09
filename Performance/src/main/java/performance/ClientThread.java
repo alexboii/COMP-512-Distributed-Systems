@@ -31,7 +31,7 @@ public class ClientThread implements Runnable {
         this.client.connectServer();
 
         for (int i = 0; i < load; i++) {
-            long wait = random.nextInt(200);
+            long wait = random.nextInt(this.period) * 2;
 
             try {
                 Thread.sleep(wait);
@@ -39,7 +39,7 @@ public class ClientThread implements Runnable {
                 e.printStackTrace();
             }
 
-            long start = System.nanoTime();
+            long start = System.currentTimeMillis();
             try {
                 int xid = this.client.startTransaction();
                 Vector<String> vector = new Vector<>();
@@ -57,8 +57,8 @@ public class ClientThread implements Runnable {
                     }
                 }
 
-                long duration = System.nanoTime() / 1000 - start;
-                System.out.println(duration);
+                long duration = System.currentTimeMillis() - start;
+                System.out.println("DURATION" + duration);
 
                 if (!aborted) {
                     vector.add(0, Command.Commit.toString());

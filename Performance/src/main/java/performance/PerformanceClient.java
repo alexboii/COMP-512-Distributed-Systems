@@ -12,18 +12,19 @@ import java.util.concurrent.TimeUnit;
  */
 public class PerformanceClient {
     public static int NUM_CLIENTS = 1;
-    public static int LOAD = 2;
-    public static int PERIOD = ((1 / LOAD * 1000) * NUM_CLIENTS);
+    public static int LOAD = 1;
+    public static int PERIOD = (int) (((1.0 / LOAD) * 1000) * NUM_CLIENTS);
 
     public static void main(String args[]) {
 //        LOAD = Integer.valueOf(args[2]);
 //        NUM_CLIENTS = Integer.valueOf(args[3]);
-//        PERIOD = (1 / LOAD * 1000) * NUM_CLIENTS;
 
         Faker faker = new Faker();
 
         ArrayList<String> fakeCities = new ArrayList();
         ArrayList<Integer> fakeIds = new ArrayList();
+
+        System.out.println("Period" + PERIOD);
 
         // add at most 10 random cities
         for (int i = 0; i < 3; i++) {
