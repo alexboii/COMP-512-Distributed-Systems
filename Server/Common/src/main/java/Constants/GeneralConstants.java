@@ -80,4 +80,7 @@ public class GeneralConstants {
     //SHUTDOWN
     public static final String SHUTDOWN = "Shutdown";
 
+    // DELAY
+    public static final int TIMER_DELAY = 10000;
+
 }

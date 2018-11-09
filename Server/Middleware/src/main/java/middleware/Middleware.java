@@ -19,7 +19,12 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.sql.Time;
+import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
@@ -32,6 +37,7 @@ public class Middleware extends ResourceManager implements IServer {
     private static final int maxConcurrentClients = 10;
     public CustomerResourceManager customerManager;
     private XIDManager xIDManager;
+    public Map<Integer, Timer> timers;
 
     private static final Logger logger = FileLogger.getLogger(Middleware.class);
 
@@ -44,6 +50,7 @@ public class Middleware extends ResourceManager implements IServer {
         super(serverName);
         customerManager = new CustomerResourceManager();
         xIDManager = new XIDManager();
+        timers = new ConcurrentHashMap<>();
     }
 
 
@@ -56,11 +63,15 @@ public class Middleware extends ResourceManager implements IServer {
         boolean aborted = false;
         JSONObject res = null;
 
-        if(!xIDManager.validate(request)){
+        if (!xIDManager.validate(request)) {
             JSONObject reply = new JSONObject();
             reply.put(VALID_XID, false);
             sendReplyToClient(writer, reply, false);
             return;
+        }
+
+        if (request.has(XID)) {
+            resetTimeout(request.getInt(XID));
         }
 
         switch ((String) request.get(TYPE)) {
@@ -176,7 +187,7 @@ public class Middleware extends ResourceManager implements IServer {
                 switch ((String) request.get(ACTION)) {
 
                     case NEW_TRANSACTION:
-                        int result = xIDManager.newTransaction();
+                        int result = newTransactionWrapper();
                         sendReply(writer, result);
                         break;
 
@@ -220,6 +231,7 @@ public class Middleware extends ResourceManager implements IServer {
         Set<String> rms = xIDManager.completeTransaction(xid);
         sendRequestToRMs(abortRequest, rms);
         customerManager.abort(xid);
+        timers.remove(xid);
     }
 
     private void sendRequestToRMs(JSONObject request, Set<String> rms) {
@@ -243,7 +255,7 @@ public class Middleware extends ResourceManager implements IServer {
     private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request) throws JSONException, DeadlockException {
         JSONObject result = null;
         int xid = request.getInt(XID);
-        xIDManager.addRM(xid, serverAddress+":"+port);
+        xIDManager.addRM(xid, serverAddress + ":" + port);
 
         try {
             logger.info("Sending request " + request + " to server: " + serverAddress + ":" + port);
@@ -257,7 +269,7 @@ public class Middleware extends ResourceManager implements IServer {
             writer.close();
             reader.close();
 
-            if(result.has(DEADLOCK) && result.getBoolean(DEADLOCK)) {
+            if (result.has(DEADLOCK) && result.getBoolean(DEADLOCK)) {
                 throw new DeadlockException(xid, "");
             }
 
@@ -465,14 +477,14 @@ public class Middleware extends ResourceManager implements IServer {
 
         if (request.getBoolean(BOOK_CAR)) {
             JSONObject reserveCarRequest = RequestFactory.getReserveCarRequest(xid, cid, location);
-            if(!reserveCar(reserveCarRequest)) {
+            if (!reserveCar(reserveCarRequest)) {
                 return false;
             }
         }
 
         if (request.getBoolean(BOOK_ROOM)) {
             JSONObject reserveRoomRequest = RequestFactory.getReserveRoomRequest(xid, cid, location);
-            if(!reserveRoom(reserveRoomRequest)) {
+            if (!reserveRoom(reserveRoomRequest)) {
                 return false;
             }
         }
@@ -487,5 +499,40 @@ public class Middleware extends ResourceManager implements IServer {
     @Override
     public void start(int port) {
         SocketUtils.startServerConnection(MIDDLEWARE_SERVER_ADDRESS, port, maxConcurrentClients, this);
+    }
+
+    public int newTransactionWrapper() {
+        int result = xIDManager.newTransaction();
+        resetTimeout(result);
+
+        return result;
+    }
+
+    public void resetTimeout(int id) {
+        if (xIDManager.getActiveTransactions().containsKey(id)) {
+            // we cancel the previous timer
+            if (timers.containsKey(id)) {
+                timers.get(id).cancel();
+            }
+
+            Timer timer = new Timer();
+
+            logger.info("created new timer");
+
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    if (xIDManager.getActiveTransactions().containsKey(id)) {
+                        try {
+                            abortAll(id);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }, TIMER_DELAY);
+
+            timers.put(id, timer);
+        }
     }
 }
