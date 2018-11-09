@@ -287,27 +287,9 @@ public class Middleware extends ResourceManager implements IServer {
 
     public int newCustomer(JSONObject request) throws JSONException, DeadlockException {
         int xid = request.getInt(XID);
-
-        JSONObject replyCar = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
-
-        if (replyCar == null) {
-            return 0;
-        }
-
-        JSONObject replyFlights = sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
-
-        if (replyFlights == null) {
-            return 0;
-        }
-
-        JSONObject replyRooms = sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
-
-        if (replyRooms == null) {
-            return 0;
-        }
-
-
-        return customerManager.newCustomer(xid) > 0 && replyFlights.getInt(RESULT) > 0 && replyCar.getInt(RESULT) > 0 && replyRooms.getInt(RESULT) > 0 ? 1 : 0;
+        int cid = customerManager.generateCID(xid);
+        newCustomerId(RequestFactory.getAddCustomerIdRequest(xid, cid));
+        return cid;
     }
 
     public boolean newCustomerId(JSONObject request) throws JSONException, DeadlockException {

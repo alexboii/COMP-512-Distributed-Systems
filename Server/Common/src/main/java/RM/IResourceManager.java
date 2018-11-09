@@ -60,13 +60,6 @@ public interface IResourceManager
     public boolean addRooms(int id, String location, int numRooms, int price) throws DeadlockException;
 
     /**
-     * Add customer.
-     *
-     * @return Unique customer identifier
-     */
-    public int newCustomer(int id) throws DeadlockException;
-
-    /**
      * Add customer with id.
      *
      * @return Success

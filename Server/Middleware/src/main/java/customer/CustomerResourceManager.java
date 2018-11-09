@@ -7,6 +7,7 @@ import Utilities.Trace;
 import org.json.JSONObject;
 
 import java.io.OutputStreamWriter;
+import java.util.Calendar;
 
 /**
  * Created by alex on 10/1/18.
@@ -66,6 +67,12 @@ public class CustomerResourceManager extends ResourceManager {
     @Override
     public void handleRequest(JSONObject request, OutputStreamWriter writer) {
         return;
+    }
+
+    public int generateCID(int xid) {
+        return Integer.parseInt(String.valueOf(xid) +
+                String.valueOf(Calendar.getInstance().get(Calendar.MILLISECOND)) +
+                String.valueOf(Math.round(Math.random() * 100 + 1)));
     }
 }
 

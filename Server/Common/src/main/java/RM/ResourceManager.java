@@ -227,18 +227,6 @@ abstract public class ResourceManager implements IResourceManager {
         }
     }
 
-    public int newCustomer(int xid) throws DeadlockException {
-        logger.info("RM::newCustomer(" + xid + ") called");
-        // Generate a globally unique ID for the new customer
-        int cid = Integer.parseInt(String.valueOf(xid) +
-                String.valueOf(Calendar.getInstance().get(Calendar.MILLISECOND)) +
-                String.valueOf(Math.round(Math.random() * 100 + 1)));
-        Customer customer = new Customer(cid);
-        transactionManager.writeDataTransaction(xid, customer.getKey(), customer);
-        logger.info("RM::newCustomer(" + cid + ") returns ID=" + cid);
-        return cid;
-    }
-
     public boolean newCustomer(int xid, int customerID) throws DeadlockException {
         logger.info("RM::newCustomer(" + xid + ", " + customerID + ") called");
         Customer customer = (Customer) transactionManager.readDataTransaction(xid, Customer.getKey(customerID));

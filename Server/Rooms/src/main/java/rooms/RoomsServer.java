@@ -115,19 +115,6 @@ public class RoomsServer extends ResourceManager implements IServer {
                 sendReply(writer, result, deadlock);
                 break;
 
-            case NEW_CUSTOMER:
-                xid = request.getInt(XID);
-
-                try {
-                    res = newCustomer(xid);
-                } catch (DeadlockException e) {
-                    logger.info(e.toString());
-                    deadlock = true;
-                }
-
-                sendReply(writer, res, deadlock);
-                break;
-
             case NEW_CUSTOMER_ID:
                 xid = request.getInt(XID);
                 customerId = request.getInt(CUSTOMER_ID);

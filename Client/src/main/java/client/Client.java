@@ -183,9 +183,9 @@ public abstract class Client {
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
                 validate(result);
-                int customer = result.getInt(RESULT);
+                int cid = result.getInt(RESULT);
 
-                System.out.println("Add customer ID: " + customer);
+                System.out.println("Add customer ID: " + cid);
                 success = true;
                 break;
             }
