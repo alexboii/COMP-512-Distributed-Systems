@@ -1,366 +1,538 @@
 package middleware;
 
 import Constants.ServerConstants;
-import RM.IResourceManager;
+import LockManager.DeadlockException;
 import RM.ResourceManager;
+import Tcp.IServer;
+import Tcp.RequestFactory;
+import Tcp.SocketUtils;
+import Utilities.FileLogger;
 import customer.CustomerResourceManager;
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
+import transaction.XIDManager;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.rmi.NotBoundException;
-import java.rmi.RMISecurityManager;
-import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
-import java.util.Vector;
+import java.sql.Time;
+import java.util.Map;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
+import static Constants.ServerConstants.MIDDLEWARE_SERVER_ADDRESS;
+import static Tcp.SocketUtils.sendReply;
+import static Tcp.SocketUtils.sendReplyToClient;
 
-public class Middleware implements IResourceManager {
+public class Middleware extends ResourceManager implements IServer {
     private static final String serverName = "Middleware";
-    private static Socket carServer;
-    private static OutputStreamWriter carServerWriter;
-    private static BufferedReader carServerReader;
+    private static final int maxConcurrentClients = 10;
+    public CustomerResourceManager customerManager;
+    private XIDManager xIDManager;
+    public Map<Integer, Timer> timers;
+
+    private static final Logger logger = FileLogger.getLogger(Middleware.class);
 
     public static void main(String[] args) {
-
-        // Figure out where server is running
-        int port = 1088;
-
-        if (args.length == 1) {
-            port = Integer.parseInt(args[0]);
-        } else if (args.length != 0 && args.length != 1) {
-            System.err.println("Wrong usage");
-            System.exit(1);
-        }
-
-        try {
-            carServer = new Socket(InetAddress.getByName(ServerConstants.CAR_SERVER_NAME), ServerConstants.CAR_SERVER_PORT);
-            System.out.println("Connected to Car server at " + ServerConstants.CAR_SERVER_NAME + ":" + ServerConstants.CAR_SERVER_PORT);
-            carServerWriter = new OutputStreamWriter(carServer.getOutputStream(), "UTF-8");
-            carServerReader = new BufferedReader(new InputStreamReader(carServer.getInputStream(), "UTF-8"));
-
-            Middleware obj = new Middleware();
-            // Create a new server object and dynamically generate the stub (client proxy)
-            IResourceManager resourceManager = (IResourceManager) UnicastRemoteObject.exportObject(obj, 0);
-
-            // Bind the remote object's stub in the registry
-            Registry l_registry;
-            try {
-                l_registry = LocateRegistry.createRegistry(port);
-            } catch (RemoteException e) {
-                l_registry = LocateRegistry.getRegistry(port);
-            }
-            final Registry registry = l_registry;
-            registry.rebind(ServerConstants.MIDDLEWARE_PREFIX, resourceManager);
-
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-                public void run() {
-                    try {
-                        registry.unbind(ServerConstants.MIDDLEWARE_PREFIX);
-                        System.out.println("'" + ServerConstants.MIDDLEWARE_PREFIX + "' resource manager unbound");
-                        carServer.close();
-                        carServerReader.close();
-                        carServerWriter.close();
-                    } catch (Exception e) {
-                        System.err.println((char) 27 + "[31;1mServer exception: " + (char) 27 + "[0mUncaught exception");
-                        e.printStackTrace();
-                    }
-                }
-            });
-            System.out.println("'middleware' resource manager server ready and bound to '" + ServerConstants.MIDDLEWARE_PREFIX + port);
-
-            System.out.println("Middleware server ready");
-        } catch (Exception e) {
-            System.err.println("Server exception: " + e.toString());
-            e.printStackTrace();
-        }
-
-        // Create and install a security manager
-        if (System.getSecurityManager() == null) {
-            System.setSecurityManager(new RMISecurityManager());
-        }
+        Middleware obj = new Middleware();
+        obj.start(ServerConstants.MIDDLEWARE_PORT);
     }
-
-    public IResourceManager carsManager;
-    public IResourceManager flightsManager;
-    public IResourceManager roomsManager;
-    public CustomerResourceManager customerManager;
 
     public Middleware() {
-//        carsManager = connectServer(ServerConstants.CAR_SERVER_NAME, ServerConstants.CAR_SERVER_PORT, ServerConstants.CAR_PREFIX);
-        roomsManager = connectServer(ServerConstants.ROOMS_SERVER, ServerConstants.ROOMS_SERVER_PORT, ServerConstants.ROOMS_PREFIX);
-        flightsManager = connectServer(ServerConstants.FLIGHTS_SERVER_NAME, ServerConstants.FLIGHTS_SERVER_PORT, ServerConstants.FLIGHTS_PREFIX);
+        super(serverName);
         customerManager = new CustomerResourceManager();
+        xIDManager = new XIDManager();
+        timers = new ConcurrentHashMap<>();
     }
 
-    private JSONObject sendAndReceive(JSONObject request) {
-        try {
-            carServerWriter.write(request.toString() + "\n");
-            carServerWriter.flush();
 
-            String line = carServerReader.readLine();
-            System.out.println("Reply from server: " + line + "\n");
-            JSONObject reply = new JSONObject(line);
-            return reply;
+    @Override
+    public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
+
+        logger.info("Received request " + request);
+
+        boolean boolRes = false;
+        boolean aborted = false;
+        JSONObject res = null;
+
+        if (!xIDManager.validate(request)) {
+            JSONObject reply = new JSONObject();
+            reply.put(VALID_XID, false);
+            sendReplyToClient(writer, reply, false);
+            return;
+        }
+
+        if (request.has(XID)) {
+            resetTimeout(request.getInt(XID));
+        }
+
+        switch ((String) request.get(TYPE)) {
+            // redirection happens here
+            case CAR_ENTITY:
+                try {
+                    res = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
+                } catch (DeadlockException e) {
+                    abortAll(request.getInt(XID));
+                    aborted = true;
+                }
+                sendReplyToClient(writer, res, aborted);
+                break;
+            case FLIGHT_ENTITY:
+                try {
+                    res = sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
+                } catch (DeadlockException e) {
+                    abortAll(request.getInt(XID));
+                    aborted = true;
+                }
+                sendReplyToClient(writer, res, aborted);
+                break;
+            case ROOM_ENTITY:
+                try {
+                    res = sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
+                } catch (DeadlockException e) {
+                    abortAll(request.getInt(XID));
+                    aborted = true;
+                }
+                sendReplyToClient(writer, res, aborted);
+                break;
+            case CUSTOMER_ENTITY:
+                switch ((String) request.get(ACTION)) {
+                    case NEW_CUSTOMER:
+                        int result = 0;
+                        try {
+                            result = newCustomer(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            aborted = true;
+                        }
+                        sendReplyToClient(writer, result, aborted);
+                        break;
+                    case NEW_CUSTOMER_ID:
+
+                        try {
+                            boolRes = newCustomerId(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            aborted = true;
+                        }
+                        sendReplyToClient(writer, boolRes, aborted);
+                        break;
+                    case DELETE_CUSTOMER:
+                        try {
+                            boolRes = deleteCustomer(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            aborted = true;
+                        }
+                        sendReplyToClient(writer, boolRes, aborted);
+                        break;
+                    case QUERY_CUSTOMER:
+                        String strRes = null;
+                        try {
+                            strRes = queryCustomerInfo(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            aborted = true;
+                        }
+                        sendReplyToClient(writer, strRes, aborted);
+                        break;
+                    case RESERVE_CARS:
+                        try {
+                            boolRes = reserveCar(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            aborted = true;
+                        }
+                        sendReplyToClient(writer, boolRes, aborted);
+                        break;
+                    case RESERVE_FLIGHT:
+                        try {
+                            boolRes = reserveFlight(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            aborted = true;
+                        }
+                        sendReply(writer, boolRes, aborted);
+                        break;
+                    case RESERVE_ROOMS:
+                        try {
+                            boolRes = reserveRoom(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            aborted = true;
+                        }
+                        sendReplyToClient(writer, boolRes, aborted);
+                        break;
+                    case BUNDLE:
+                        try {
+                            boolRes = bundle(request);
+                        } catch (DeadlockException e) {
+                            abortAll(request.getInt(XID));
+                            aborted = true;
+                        }
+                        sendReplyToClient(writer, boolRes, aborted);
+                        break;
+                }
+                break;
+
+            case TRANSACTION:
+                switch ((String) request.get(ACTION)) {
+
+                    case NEW_TRANSACTION:
+                        int result = newTransactionWrapper();
+                        sendReply(writer, result);
+                        break;
+
+                    case COMMIT:
+                        commitAll(request);
+                        sendReply(writer, true);
+                        break;
+
+                    case ABORT:
+                        abortAll(request.getInt(XID));
+                        sendReply(writer, true);
+                        break;
+                }
+                break;
+
+            case OTHERS:
+                switch ((String) request.get(ACTION)) {
+                    case SHUTDOWN:
+                        sendRequest(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
+                        sendRequest(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
+                        sendRequest(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
+                        logger.info("Shutting down");
+                        System.exit(0);
+                        break;
+                }
+                break;
+        }
+    }
+
+    private void commitAll(JSONObject commitRequest) throws JSONException {
+        int xid = commitRequest.getInt(XID);
+        logger.info("Committing transaction: " + xid);
+        Set<String> rms = xIDManager.completeTransaction(xid);
+        sendRequestToRMs(commitRequest, rms);
+        customerManager.commit(xid);
+    }
+
+    private void abortAll(int xid) throws JSONException {
+        logger.info("Aborting transaction: " + xid);
+        JSONObject abortRequest = RequestFactory.getAbortRequest(xid);
+        Set<String> rms = xIDManager.completeTransaction(xid);
+        sendRequestToRMs(abortRequest, rms);
+        customerManager.abort(xid);
+        timers.remove(xid);
+    }
+
+    private void sendRequestToRMs(JSONObject request, Set<String> rms) {
+        logger.info("Sending request to resource managers.");
+        rms.forEach(rm -> {
+            String[] hostPort = rm.split(":");
+            String host = hostPort[0];
+            int port = Integer.parseInt(hostPort[1]);
+            sendRequest(host, port, request);
+        });
+    }
+
+    /**
+     * Routing happens here
+     *
+     * @param serverAddress
+     * @param port
+     * @param request
+     * @return
+     */
+    private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request) throws JSONException, DeadlockException {
+        JSONObject result = null;
+        int xid = request.getInt(XID);
+        xIDManager.addRM(xid, serverAddress + ":" + port);
+
+        try {
+            logger.info("Sending request " + request + " to server: " + serverAddress + ":" + port);
+            Socket server = new Socket(InetAddress.getByName(serverAddress), port);
+            OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(server.getInputStream(), CHAR_SET));
+
+            result = SocketUtils.sendAndReceive(request, writer, reader);
+
+            server.close();
+            writer.close();
+            reader.close();
+
+            if (result.has(DEADLOCK) && result.getBoolean(DEADLOCK)) {
+                throw new DeadlockException(xid, "");
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return null;
+
+        return result;
     }
 
-    @Override
-    public boolean addFlight(int id, int flightNum, int flightSeats, int flightPrice) throws RemoteException {
-        return flightsManager.addFlight(id, flightNum, flightSeats, flightPrice);
-    }
+    private void sendRequest(String serverAddress, int port, JSONObject request) {
 
-    @Override
-    public boolean addCars(int id, String location, int numCars, int price) throws RemoteException {
-        JSONObject request = new JSONObject();
-        request.put(ACTION, ADD_CARS);
-        request.put(CAR_XID, id);
-        request.put(CAR_LOCATION, location);
-        request.put(CAR_COUNT, numCars);
-        request.put(CAR_PRICE, price);
+        try {
+            logger.info("Sending request " + request + " to server: " + serverAddress + ":" + port);
+            Socket server = new Socket(InetAddress.getByName(serverAddress), port);
+            OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
 
-        JSONObject reply = sendAndReceive(request);
-        if(reply == null) {
-            return false;
+            SocketUtils.send(request, writer);
+
+            server.close();
+            writer.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return reply.getBoolean(RESULT);
     }
 
-    @Override
-    public boolean addRooms(int id, String location, int numRooms, int price) throws RemoteException {
-        return roomsManager.addRooms(id, location, numRooms, price);
+    public int newCustomer(JSONObject request) throws JSONException, DeadlockException {
+        int xid = request.getInt(XID);
+        int cid = customerManager.generateCID(xid);
+        newCustomerId(RequestFactory.getAddCustomerIdRequest(xid, cid));
+        return cid;
     }
 
-    @Override
-    public int newCustomer(int id) throws RemoteException {
-        JSONObject request = new JSONObject();
-        request.put(ACTION, NEW_CUSTOMER);
-        request.put(CUSTOMER_XID, id);
+    public boolean newCustomerId(JSONObject request) throws JSONException, DeadlockException {
+        int xid = request.getInt(XID);
+        int cid = request.getInt(CUSTOMER_ID);
 
-        JSONObject reply = sendAndReceive(request);
-        if(reply == null) {
-            return 0;
-        }
+        JSONObject replyCar = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
 
-        return customerManager.newCustomer(id) == 1 && flightsManager.newCustomer(id) == 1 && roomsManager.newCustomer(id) == 1 && reply.getInt(RESULT) == 1 ? 1 : 0;
-    }
-
-    @Override
-    public boolean newCustomer(int id, int cid) throws RemoteException {
-        JSONObject request = new JSONObject();
-        request.put(ACTION, NEW_CUSTOMER_ID);
-        request.put(CUSTOMER_XID, id);
-        request.put(CUSTOMER_ID, cid);
-
-        JSONObject reply = sendAndReceive(request);
-        if(reply == null) {
+        if (replyCar == null) {
             return false;
         }
 
-        return customerManager.newCustomer(id, cid) && flightsManager.newCustomer(id, cid) && roomsManager.newCustomer(id, cid) && reply.getBoolean(RESULT);
-    }
+        JSONObject replyFlights = sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
 
-    @Override
-    public boolean deleteFlight(int id, int flightNum) throws RemoteException {
-        return flightsManager.deleteFlight(id, flightNum);
-    }
-
-    @Override
-    public boolean deleteCars(int id, String location) throws RemoteException {
-        JSONObject request = new JSONObject();
-        request.put(ACTION, DELETE_CARS);
-        request.put(CAR_XID, id);
-        request.put(CAR_LOCATION, location);
-
-        JSONObject reply = sendAndReceive(request);
-        if(reply == null) {
-            return false;
-        }
-        return reply.getBoolean(RESULT);
-    }
-
-    @Override
-    public boolean deleteRooms(int id, String location) throws RemoteException {
-        return roomsManager.deleteRooms(id, location);
-    }
-
-    @Override
-    public boolean deleteCustomer(int id, int customerID) throws RemoteException {
-        JSONObject request = new JSONObject();
-        request.put(ACTION, DELETE_CUSTOMER);
-        request.put(CUSTOMER_XID, id);
-        request.put(CUSTOMER_ID, customerID);
-
-        JSONObject reply = sendAndReceive(request);
-        if(reply == null) {
+        if (replyFlights == null) {
             return false;
         }
 
-        return customerManager.deleteCustomer(id, customerID) && flightsManager.deleteCustomer(id, customerID) && roomsManager.deleteCustomer(id, customerID) && reply.getBoolean(RESULT);
-    }
+        JSONObject replyRooms = sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
 
-    @Override
-    public int queryFlight(int id, int flightNumber) throws RemoteException {
-        return flightsManager.queryFlight(id, flightNumber);
-    }
-
-    @Override
-    public int queryCars(int id, String location) throws RemoteException {
-        JSONObject request = new JSONObject();
-        request.put(ACTION, QUERY_CARS);
-        request.put(CAR_XID, id);
-        request.put(CAR_LOCATION, location);
-
-        JSONObject reply = sendAndReceive(request);
-        if(reply == null) {
-            return 0;
-        }
-        return reply.getInt(RESULT);
-    }
-
-    @Override
-    public int queryRooms(int id, String location) throws RemoteException {
-        return roomsManager.queryRooms(id, location);
-    }
-
-    @Override
-    public String queryCustomerInfo(int id, int customerID) throws RemoteException {
-        return customerManager.queryCustomerInfo(id, customerID);
-    }
-
-    @Override
-    public int queryFlightPrice(int id, int flightNumber) throws RemoteException {
-        return flightsManager.queryFlightPrice(id, flightNumber);
-    }
-
-    @Override
-    public int queryCarsPrice(int id, String location) throws RemoteException {
-        JSONObject request = new JSONObject();
-        request.put(ACTION, QUERY_CARS_PRICE);
-        request.put(CAR_XID, id);
-        request.put(CAR_LOCATION, location);
-
-        JSONObject reply = sendAndReceive(request);
-        if(reply == null) {
-            return 0;
-        }
-        return reply.getInt(RESULT);
-    }
-
-    @Override
-    public int queryRoomsPrice(int id, String location) throws RemoteException {
-        return roomsManager.queryRoomsPrice(id, location);
-    }
-
-    @Override
-    public boolean reserveFlight(int id, int customerID, int flightNumber) throws RemoteException {
-        if (!flightsManager.reserveFlight(id, customerID, flightNumber)) {
+        if (replyRooms == null) {
             return false;
         }
 
-        int price = queryFlightPrice(id, flightNumber);
-
-        return customerManager.reserveFlight(id, customerID, flightNumber, price);
+        return customerManager.newCustomer(xid, cid) && replyCar.getBoolean(RESULT) && replyFlights.getBoolean(RESULT) && replyRooms.getBoolean(RESULT);
     }
 
-    @Override
-    public boolean reserveCar(int id, int customerID, String location) throws RemoteException {        
-        JSONObject request = new JSONObject();
-        request.put(ACTION, RESERVE_CARS);
-        request.put(CAR_XID, id);
-        request.put(CAR_CUSTOMER_ID, customerID);
-        request.put(CAR_LOCATION, location);
+    public boolean deleteCustomer(JSONObject request) throws JSONException, DeadlockException {
+        int xid = request.getInt(XID);
+        int cid = request.getInt(CUSTOMER_ID);
 
-        JSONObject reply = sendAndReceive(request);
-        if(reply == null || !reply.getBoolean(RESULT)) {
+        JSONObject replyCar = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
+
+        if (replyCar == null) {
+            return false;
+        }
+
+        JSONObject replyFlights = sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
+
+        if (replyFlights == null) {
+            return false;
+        }
+
+        JSONObject replyRooms = sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
+
+        if (replyRooms == null) {
+            return false;
+        }
+
+        return customerManager.deleteCustomer(xid, cid) && replyCar.getBoolean(RESULT) && replyFlights.getBoolean(RESULT) && replyRooms.getBoolean(RESULT);
+    }
+
+
+    public String queryCustomerInfo(JSONObject request) throws JSONException, DeadlockException {
+        int xid = request.getInt(XID);
+        int cid = request.getInt(CUSTOMER_ID);
+
+        return customerManager.queryCustomerInfo(xid, cid);
+    }
+
+
+    public boolean reserveFlight(JSONObject request) throws JSONException, DeadlockException {
+        JSONObject replyFlights = sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
+
+        if (replyFlights == null || !replyFlights.getBoolean(RESULT)) {
             return false;
         }
 
 
-        int price = queryCarsPrice(id, location);
+        int xid = request.getInt(XID);
+        int cid = request.getInt(CUSTOMER_ID);
+        int flightNumber = request.getInt(FLIGHT_NUMBER);
 
-        return customerManager.reserveCar(id, customerID, location, price);
-    }
+        JSONObject priceRequest = new JSONObject();
 
-    @Override
-    public boolean reserveRoom(int id, int customerID, String location) throws RemoteException {
+        priceRequest.put(TYPE, FLIGHT_ENTITY);
+        priceRequest.put(ACTION, QUERY_FLIGHTS_PRICE);
+        priceRequest.put(XID, xid);
+        priceRequest.put(FLIGHT_NUMBER, flightNumber);
 
-        if (!roomsManager.reserveRoom(id, customerID, location)) {
+
+        JSONObject replyPrice = sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, priceRequest);
+
+        if (replyPrice == null) {
             return false;
         }
 
-        int price = queryRoomsPrice(id, location);
-
-        return customerManager.reserveRoom(id, customerID, location, price);
+        return customerManager.reserveFlight(xid, cid, flightNumber, replyPrice.getInt(RESULT));
     }
 
-    @Override
-    public boolean bundle(int id, int customerID, Vector<String> flightNumbers, String location, boolean car, boolean room) throws RemoteException {
-        for(String flightNumber : flightNumbers){
+    public boolean reserveCar(JSONObject request) throws JSONException, DeadlockException {
+        JSONObject replyCar = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
+
+        if (replyCar == null || !replyCar.getBoolean(RESULT)) {
+            return false;
+        }
+
+        int xid = request.getInt(XID);
+        int cid = request.getInt(CUSTOMER_ID);
+        String location = request.getString(CAR_LOCATION);
+
+        JSONObject priceRequest = new JSONObject();
+
+        priceRequest.put(TYPE, CAR_ENTITY);
+        priceRequest.put(ACTION, QUERY_CARS_PRICE);
+        priceRequest.put(XID, xid);
+        priceRequest.put(CAR_LOCATION, location);
+
+
+        JSONObject replyPrice = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, priceRequest);
+
+        if (replyPrice == null) {
+            return false;
+        }
+
+        return customerManager.reserveCar(xid, cid, location, replyPrice.getInt(RESULT));
+    }
+
+    public boolean reserveRoom(JSONObject request) throws JSONException, DeadlockException {
+        JSONObject replyRoom = sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
+
+        if (replyRoom == null || !replyRoom.getBoolean(RESULT)) {
+            return false;
+        }
+
+        int xid = request.getInt(XID);
+        int cid = request.getInt(CUSTOMER_ID);
+        String location = request.getString(ROOM_LOCATION);
+
+        JSONObject priceRequest = new JSONObject();
+
+        priceRequest.put(TYPE, ROOM_ENTITY);
+        priceRequest.put(ACTION, QUERY_ROOMS_PRICE);
+        priceRequest.put(XID, xid);
+        priceRequest.put(ROOM_LOCATION, location);
+
+
+        JSONObject replyPrice = sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, priceRequest);
+
+        if (replyPrice == null) {
+            return false;
+        }
+
+        return customerManager.reserveRoom(xid, cid, location, replyPrice.getInt(RESULT));
+    }
+
+    public boolean bundle(JSONObject request) throws JSONException, DeadlockException {
+
+        int xid = request.getInt(XID);
+        int cid = request.getInt(CUSTOMER_ID);
+        String location = request.getString(ROOM_LOCATION);
+        JSONArray flightNumbers = request.getJSONArray(FLIGHT_NUMBERS);
+
+        for (int i = 0; i < flightNumbers.length(); i++) {
             try {
+                String flightNumber = (String) flightNumbers.get(i);
                 int parsedFlightNumber = Integer.parseInt(flightNumber);
 
                 // TODO: DEAL WITH THE CASE OF CORRUPTED DATA IF ONE CALL FAILS AND THE OTHERS GO THROUGH IN THE NEXT ITERATION, NOT NOW THOUGH
                 // it was said by TA in Discussion forum of myCourses that we do not need to deal with corrupt data for now, so it's okay
                 // TODO: WILL ALSO HAVE TO IMPLEMENT "UNRESERVE" METHODS FOR THIS
 
-                if(!reserveFlight(id, customerID, parsedFlightNumber)){
+                JSONObject reserveFlightRequest = RequestFactory.getReserveFlightRequest(xid, cid, parsedFlightNumber);
+                if (!reserveFlight(reserveFlightRequest)) {
                     return false;
                 }
 
-            } catch(NumberFormatException e){
-                System.out.println(e);
+            } catch (NumberFormatException e) {
+                logger.severe(e.toString());
                 return false;
             }
         }
 
-        if(car && !reserveCar(id, customerID, location)){
-            return false;
+        if (request.getBoolean(BOOK_CAR)) {
+            JSONObject reserveCarRequest = RequestFactory.getReserveCarRequest(xid, cid, location);
+            if (!reserveCar(reserveCarRequest)) {
+                return false;
+            }
         }
 
-        return room ? reserveRoom(id, customerID, location) : true;
+        if (request.getBoolean(BOOK_ROOM)) {
+            JSONObject reserveRoomRequest = RequestFactory.getReserveRoomRequest(xid, cid, location);
+            if (!reserveRoom(reserveRoomRequest)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
-    public String getName() throws RemoteException {
+    public String getName() {
         return null;
     }
 
-    public IResourceManager connectServer(String address, int port, String prefix) {
+    @Override
+    public void start(int port) {
+        SocketUtils.startServerConnection(MIDDLEWARE_SERVER_ADDRESS, port, maxConcurrentClients, this);
+    }
 
-        IResourceManager m_resourceManager = null;
+    public int newTransactionWrapper() {
+        int result = xIDManager.newTransaction();
+        resetTimeout(result);
 
-        try {
-            boolean first = true;
-            while (true) {
+        return result;
+    }
 
-                try {
-                    Registry registry = LocateRegistry.getRegistry(address, port);
-                    m_resourceManager = (IResourceManager) registry.lookup(prefix);
-                    System.out.println("Connected to '" + prefix + "' server [" + address + ":" + port + "/" + prefix + "]");
+    public void resetTimeout(int id) {
+        if (xIDManager.getActiveTransactions().containsKey(id)) {
+            // we cancel the previous timer
+            if (timers.containsKey(id)) {
+                timers.get(id).cancel();
+            }
 
-                    return m_resourceManager;
-                } catch (NotBoundException | RemoteException e) {
-                    if (first) {
-                        System.out.println("Waiting for '" + prefix + "' server [" + address + ":" + port + "/" + prefix + "]");
-                        first = false;
+            Timer timer = new Timer();
+
+            logger.info("created new timer");
+
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    if (xIDManager.getActiveTransactions().containsKey(id)) {
+                        try {
+                            abortAll(id);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
-                Thread.sleep(500);
-            }
-        } catch (Exception e) {
-            System.err.println((char) 27 + "[31;1mServer exception: " + (char) 27 + "[0mUncaught exception");
-            e.printStackTrace();
-            System.exit(1);
-        }
+            }, TIMER_DELAY);
 
-        return m_resourceManager;
+            timers.put(id, timer);
+        }
     }
 }

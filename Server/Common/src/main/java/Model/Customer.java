@@ -5,9 +5,7 @@
 
 package Model;
 
-import java.util.*;
-
-public class Customer extends RMItem {
+public class Customer extends ResourceItem {
     private int m_ID;
     private RMHashMap m_reservations;
 
@@ -43,7 +41,7 @@ public class Customer extends RMItem {
     }
 
     public String getBill() {
-        String s = "Bill for customer " + m_ID + "\n";
+        String s = "Bill for customerID=" + m_ID + " is as follows:\n";
         for (String key : m_reservations.keySet()) {
             ReservedItem item = (ReservedItem) m_reservations.get(key);
             s += +item.getCount() + " " + item.getReservableItemKey() + " $" + item.getPrice() + "\n";

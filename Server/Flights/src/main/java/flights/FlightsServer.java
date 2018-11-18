@@ -1,4 +1,4 @@
-package cars;
+package flights;
 
 import Constants.ServerConstants;
 import LockManager.DeadlockException;
@@ -9,26 +9,30 @@ import Utilities.FileLogger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
 import static Tcp.SocketUtils.sendReply;
 
-public class CarServer extends ResourceManager implements IServer {
 
-    private static final String serverName = "Cars";
+/**
+ * Created by alex on 9/25/18.
+ */
+public class FlightsServer extends ResourceManager implements IServer {
+    private static final String serverName = "Flights";
     private static final int maxConcurrentClients = 10;
 
-    private static final Logger logger = FileLogger.getLogger(CarServer.class);
+    private static final Logger logger = FileLogger.getLogger(FlightsServer.class);
 
-    CarServer() {
+    public FlightsServer() {
         super(serverName);
     }
 
     @Override
     public void start(int port) {
-        SocketUtils.startServerConnection(ServerConstants.CAR_SERVER_ADDRESS, port, maxConcurrentClients, this);
+        SocketUtils.startServerConnection(ServerConstants.FLIGHTS_SERVER_ADDRESS, port, maxConcurrentClients, this);
     }
 
     @Override
@@ -41,15 +45,14 @@ public class CarServer extends ResourceManager implements IServer {
         int res = 0;
 
         switch ((String) request.get(ACTION)) {
-
-            case ADD_CARS:
+            case ADD_FLIGHTS:
                 int xid = request.getInt(XID);
-                String location = request.getString(CAR_LOCATION);
-                int count = request.getInt(CAR_COUNT);
-                int price = request.getInt(CAR_PRICE);
+                int number = request.getInt(FLIGHT_NUMBER);
+                int count = request.getInt(FLIGHT_SEATS);
+                int price = request.getInt(FLIGHT_PRICE);
 
                 try {
-                    result = addCars(xid, location, count, price);
+                    result = addFlight(xid, number, count, price);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     deadlock = true;
@@ -57,11 +60,12 @@ public class CarServer extends ResourceManager implements IServer {
                 sendReply(writer, result, deadlock);
                 break;
 
-            case DELETE_CARS:
+            case DELETE_FLIGHTS:
                 xid = request.getInt(XID);
-                location = request.getString(CAR_LOCATION);
+                number = request.getInt(FLIGHT_NUMBER);
+
                 try {
-                    result = deleteCars(xid, location);
+                    result = deleteFlight(xid, number);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     deadlock = true;
@@ -69,11 +73,12 @@ public class CarServer extends ResourceManager implements IServer {
                 sendReply(writer, result, deadlock);
                 break;
 
-            case QUERY_CARS:
+            case QUERY_FLIGHTS:
                 xid = request.getInt(XID);
-                location = request.getString(CAR_LOCATION);
+                number = request.getInt(FLIGHT_NUMBER);
+
                 try {
-                    res = queryCars(xid, location);
+                    res = queryFlight(xid, number);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     deadlock = true;
@@ -81,12 +86,12 @@ public class CarServer extends ResourceManager implements IServer {
                 sendReply(writer, res, deadlock);
                 break;
 
-            case QUERY_CARS_PRICE:
+            case QUERY_FLIGHTS_PRICE:
                 xid = request.getInt(XID);
-                location = request.getString(CAR_LOCATION);
+                number = request.getInt(FLIGHT_NUMBER);
 
                 try {
-                    res = queryCarsPrice(xid, location);
+                    res = queryFlightPrice(xid, number);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     deadlock = true;
@@ -94,13 +99,13 @@ public class CarServer extends ResourceManager implements IServer {
                 sendReply(writer, res, deadlock);
                 break;
 
-            case RESERVE_CARS:
+            case RESERVE_FLIGHT:
                 xid = request.getInt(XID);
-                int customerId = request.getInt(CAR_CUSTOMER_ID);
-                location = request.getString(CAR_LOCATION);
+                int customerId = request.getInt(CUSTOMER_ID);
+                number = request.getInt(FLIGHT_NUMBER);
 
                 try {
-                    result = reserveCar(xid, customerId, location);
+                    result = reserveFlight(xid, customerId, number);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     deadlock = true;
@@ -150,6 +155,5 @@ public class CarServer extends ResourceManager implements IServer {
                 System.exit(0);
                 break;
         }
-
     }
 }

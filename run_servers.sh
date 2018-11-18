@@ -12,10 +12,10 @@ POM_FILE_NAME="pom.xml"
 
 #servers
 COMMON_SERVER="mimi.cs.mcgill.ca"
-CARS_SERVER="lab2-17.cs.mcgill.ca"
-FLIGHTS_SERVER="lab2-11.cs.mcgill.ca"
-ROOMS_SERVER="lab2-35.cs.mcgill.ca"
-MIDDLEWARE_SERVER="lab2-37.cs.mcgill.ca"
+CARS_SERVER="lab2-11.cs.mcgill.ca"
+FLIGHTS_SERVER="lab2-12.cs.mcgill.ca"
+ROOMS_SERVER="lab2-13.cs.mcgill.ca"
+MIDDLEWARE_SERVER="lab2-14.cs.mcgill.ca"
 ENTITIES_SERVERS="$CARS_SERVER $FLIGHTS_SERVER $ROOMS_SERVER $MIDDLEWARE_SERVER"
 
 #declare entities
@@ -47,11 +47,10 @@ MIDDLEWARE_JAR_LOCATION="$MIDDLEWARE_DIR$JAR_LOCATION$JAR_MIDDLEWARE"
 JAR_DIRS="$CAR_JAR_LOCATION $FLIGHTS_JAR_LOCATION $ROOMS_JAR_LOCATION $MIDDLEWARE_JAR_LOCATION"
 
 #commands
-REGISTRY_COMMAND="rmiregistry -J-Djava.rmi.server.useCodebaseOnly=false"
-CARS_COMMAND="java -Djava.security.policy=java.policy -Djava.rmi.server.codebase=file:./$JAR_CARS -jar $JAR_CARS &"
-FLIGHTS_COMMAND="java -Djava.security.policy=java.policy -Djava.rmi.server.codebase=file:./$JAR_FLIGHTS -jar $JAR_FLIGHTS &"
-ROOMS_COMMAND="java -Djava.security.policy=java.policy -Djava.rmi.server.codebase=file:./$JAR_ROOMS -jar $JAR_ROOMS &"
-MIDDLEWARE_COMMAND="java -Djava.security.policy=java.policy -Djava.rmi.server.codebase=file:./$JAR_MIDDLEWARE -jar $JAR_MIDDLEWARE &"
+CARS_COMMAND="java -jar $JAR_CARS &"
+FLIGHTS_COMMAND="java -jar $JAR_FLIGHTS &"
+ROOMS_COMMAND="java -jar $JAR_ROOMS &"
+MIDDLEWARE_COMMAND="java -jar $JAR_MIDDLEWARE &"
 
 #ports
 REGULAR_PORT="1099"
@@ -68,26 +67,11 @@ for JAR_DIR  in ${JAR_DIRS}; do
 	echo "Copying $JAR_DIR to $username@$COMMON_SERVER:~..."
 	sshpass -p $password scp -o StrictHostKeyChecking=no $JAR_DIR "$username@$COMMON_SERVER:~"
 done
-	
-
-echo GENERATE POLICY FILE 
-echo "grant {" > $ROOT_DIR/java.policy
-echo "	permission java.security.AllPermission;" >> $ROOT_DIR/java.policy
-echo "};" >> $ROOT_DIR/java.policy
-
-#copy policy file to server
-sshpass -p $password scp -o StrictHostKeyChecking=no "$ROOT_DIR/java.policy" "$username@$COMMON_SERVER:~"
-
-#remove policy file from local 
-#rm -rf "$ROOT_DIR/java.policy"
 
 # kill all currently active processes in these remote machines
 for ENTITY_SERVER in ${ENTITIES_SERVERS}; do
     sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ENTITY_SERVER" "pkill -u $username"
 done
-
-#initiate exclusive registry on another port for middleware server
-sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$MIDDLEWARE_SERVER" "$REGISTRY_COMMAND $MIDDLEWARE_PORT &"
 
 #run the different servers on different machines
 

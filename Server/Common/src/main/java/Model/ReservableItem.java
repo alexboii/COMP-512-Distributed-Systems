@@ -8,7 +8,7 @@ package Model;
 import java.io.*;
 
 // Superclass for the three reservable items: Flight, Car, and Room
-public abstract class ReservableItem extends RMItem implements Serializable
+public abstract class ReservableItem extends ResourceItem implements Serializable
 {
     private int m_nCount;
     private int m_nPrice;

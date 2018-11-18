@@ -1,4 +1,4 @@
-package cars;
+package rooms;
 
 import Constants.ServerConstants;
 import LockManager.DeadlockException;
@@ -9,26 +9,30 @@ import Utilities.FileLogger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.logging.Logger;
+
 
 import static Constants.GeneralConstants.*;
 import static Tcp.SocketUtils.sendReply;
 
-public class CarServer extends ResourceManager implements IServer {
-
-    private static final String serverName = "Cars";
+/**
+ * Created by alex on 10/2/18.
+ */
+public class RoomsServer extends ResourceManager implements IServer {
+    private static final String serverName = "Rooms";
     private static final int maxConcurrentClients = 10;
 
-    private static final Logger logger = FileLogger.getLogger(CarServer.class);
+    private static final Logger logger = FileLogger.getLogger(RoomsServer.class);
 
-    CarServer() {
+    public RoomsServer() {
         super(serverName);
     }
 
     @Override
     public void start(int port) {
-        SocketUtils.startServerConnection(ServerConstants.CAR_SERVER_ADDRESS, port, maxConcurrentClients, this);
+        SocketUtils.startServerConnection(ServerConstants.ROOMS_SERVER_ADDRESS, port, maxConcurrentClients, this);
     }
 
     @Override
@@ -42,14 +46,14 @@ public class CarServer extends ResourceManager implements IServer {
 
         switch ((String) request.get(ACTION)) {
 
-            case ADD_CARS:
+            case ADD_ROOMS:
                 int xid = request.getInt(XID);
-                String location = request.getString(CAR_LOCATION);
-                int count = request.getInt(CAR_COUNT);
-                int price = request.getInt(CAR_PRICE);
+                String location = request.getString(ROOM_LOCATION);
+                int count = request.getInt(ROOM_COUNT);
+                int price = request.getInt(ROOM_PRICE);
 
                 try {
-                    result = addCars(xid, location, count, price);
+                    result = addRooms(xid, location, count, price);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     deadlock = true;
@@ -57,23 +61,26 @@ public class CarServer extends ResourceManager implements IServer {
                 sendReply(writer, result, deadlock);
                 break;
 
-            case DELETE_CARS:
+            case DELETE_ROOMS:
                 xid = request.getInt(XID);
-                location = request.getString(CAR_LOCATION);
+                location = request.getString(ROOM_LOCATION);
+
                 try {
-                    result = deleteCars(xid, location);
+                    result = deleteRooms(xid, location);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     deadlock = true;
                 }
                 sendReply(writer, result, deadlock);
+
                 break;
 
-            case QUERY_CARS:
+            case QUERY_ROOMS:
                 xid = request.getInt(XID);
-                location = request.getString(CAR_LOCATION);
+                location = request.getString(ROOM_LOCATION);
+
                 try {
-                    res = queryCars(xid, location);
+                    res = queryRooms(xid, location);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     deadlock = true;
@@ -81,12 +88,12 @@ public class CarServer extends ResourceManager implements IServer {
                 sendReply(writer, res, deadlock);
                 break;
 
-            case QUERY_CARS_PRICE:
+            case QUERY_ROOMS_PRICE:
                 xid = request.getInt(XID);
-                location = request.getString(CAR_LOCATION);
+                location = request.getString(ROOM_LOCATION);
 
                 try {
-                    res = queryCarsPrice(xid, location);
+                    res = queryRoomsPrice(xid, location);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     deadlock = true;
@@ -94,13 +101,13 @@ public class CarServer extends ResourceManager implements IServer {
                 sendReply(writer, res, deadlock);
                 break;
 
-            case RESERVE_CARS:
+            case RESERVE_ROOMS:
                 xid = request.getInt(XID);
-                int customerId = request.getInt(CAR_CUSTOMER_ID);
-                location = request.getString(CAR_LOCATION);
+                int customerId = request.getInt(CUSTOMER_ID);
+                location = request.getString(ROOM_LOCATION);
 
                 try {
-                    result = reserveCar(xid, customerId, location);
+                    result = reserveRoom(xid, customerId, location);
                 } catch (DeadlockException e) {
                     logger.info(e.toString());
                     deadlock = true;
@@ -150,6 +157,5 @@ public class CarServer extends ResourceManager implements IServer {
                 System.exit(0);
                 break;
         }
-
     }
 }

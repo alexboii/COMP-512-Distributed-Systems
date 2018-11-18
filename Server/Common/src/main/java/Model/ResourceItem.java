@@ -6,9 +6,9 @@ import java.io.*;
  * Created by alex on 9/25/18.
  */
 // Resource manager data item
-public abstract class RMItem implements Serializable, Cloneable
+public abstract class ResourceItem implements Serializable, Cloneable
 {
-    RMItem()
+    ResourceItem()
     {
         super();
     }

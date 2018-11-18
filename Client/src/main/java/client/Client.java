@@ -1,16 +1,29 @@
 package client;
 
-import RM.IResourceManager;
+import Tcp.RequestFactory;
+import Tcp.SocketUtils;
+import Utilities.InvalidTransactionException;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-import java.util.*;
-import java.io.*;
-import java.rmi.RemoteException;
-import java.rmi.ConnectException;
-import java.rmi.ServerException;
-import java.rmi.UnmarshalException;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.Socket;
+import java.util.StringTokenizer;
+import java.util.Vector;
+
+import Utilities.TransactionAbortException;
+
+import static Constants.GeneralConstants.ABORTED;
+import static Constants.GeneralConstants.RESULT;
+import static Constants.GeneralConstants.VALID_XID;
 
 public abstract class Client {
-    IResourceManager m_resourceManager = null;
+    protected Socket middleware;
+    protected OutputStreamWriter middlewareWriter;
+    protected BufferedReader middlewareReader;
 
     public Client() {
         super();
@@ -21,7 +34,7 @@ public abstract class Client {
     public void start() {
         // Prepare for reading commands
         System.out.println();
-        System.out.println("Location \"help\" for list of supported commands");
+        System.out.println("Location \"Help\" for list of supported commands");
 
         BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
 
@@ -41,16 +54,13 @@ public abstract class Client {
             try {
                 arguments = parse(command);
                 Command cmd = Command.fromString((String) arguments.elementAt(0));
-                try {
-                    execute(cmd, arguments);
-                } catch (ConnectException e) {
-                    connectServer();
-                    execute(cmd, arguments);
-                }
-            } catch (IllegalArgumentException | ServerException e) {
+                execute(cmd, arguments);
+            } catch (IllegalArgumentException e) {
                 System.err.println((char) 27 + "[31;1mCommand exception: " + (char) 27 + "[0m" + e.getLocalizedMessage());
-            } catch (ConnectException | UnmarshalException e) {
-                System.err.println((char) 27 + "[31;1mCommand exception: " + (char) 27 + "[0mConnection to server lost");
+            } catch (TransactionAbortException e) {
+                System.err.println((char) 27 + "[31;1mCommand exception: " + (char) 27 + "[0m" + e.getLocalizedMessage());
+            } catch (InvalidTransactionException e) {
+                System.err.println((char) 27 + "[31;1mCommand exception: " + (char) 27 + "[0m" + e.getLocalizedMessage());
             } catch (Exception e) {
                 System.err.println((char) 27 + "[31;1mCommand exception: " + (char) 27 + "[0mUncaught exception");
                 e.printStackTrace();
@@ -58,7 +68,9 @@ public abstract class Client {
         }
     }
 
-    public void execute(Command cmd, Vector<String> arguments) throws RemoteException, NumberFormatException {
+    public boolean execute(Command cmd, Vector<String> arguments) throws NumberFormatException, JSONException, TransactionAbortException, InvalidTransactionException {
+        boolean success = false;
+
         switch (cmd) {
             case Help: {
                 if (arguments.size() == 1) {
@@ -69,6 +81,17 @@ public abstract class Client {
                 } else {
                     System.err.println((char) 27 + "[31;1mCommand exception: " + (char) 27 + "[0mImproper use of help command. Location \"help\" or \"help,<CommandName>\"");
                 }
+                success = true;
+                break;
+            }
+            case Start: {
+                checkArgumentsCount(1, arguments.size());
+                System.out.println("Starting a new transaction");
+                JSONObject request = RequestFactory.getNewTransactionRequest();
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+                int xid = result.getInt(RESULT);
+                System.out.println("Transaction ID: " + xid);
+                success = true;
                 break;
             }
             case AddFlight: {
@@ -84,11 +107,18 @@ public abstract class Client {
                 int flightSeats = toInt(arguments.elementAt(3));
                 int flightPrice = toInt(arguments.elementAt(4));
 
-                if (m_resourceManager.addFlight(id, flightNum, flightSeats, flightPrice)) {
+                JSONObject request = RequestFactory.getAddFlightRequest(id, flightNum, flightSeats, flightPrice);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Flight added");
+                    success = true;
                 } else {
                     System.out.println("Flight could not be added");
                 }
+
                 break;
             }
             case AddCars: {
@@ -104,8 +134,14 @@ public abstract class Client {
                 int numCars = toInt(arguments.elementAt(3));
                 int price = toInt(arguments.elementAt(4));
 
-                if (m_resourceManager.addCars(id, location, numCars, price)) {
+                JSONObject request = RequestFactory.getAddCarRequest(id, location, numCars, price);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Cars added");
+                    success = true;
                 } else {
                     System.out.println("Cars could not be added");
                 }
@@ -124,8 +160,13 @@ public abstract class Client {
                 int numRooms = toInt(arguments.elementAt(3));
                 int price = toInt(arguments.elementAt(4));
 
-                if (m_resourceManager.addRooms(id, location, numRooms, price)) {
+                JSONObject request = RequestFactory.getAddRoomRequest(id, location, numRooms, price);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Rooms added");
+                    success = true;
                 } else {
                     System.out.println("Rooms could not be added");
                 }
@@ -137,9 +178,15 @@ public abstract class Client {
                 System.out.println("Adding a new customer [xid=" + arguments.elementAt(1) + "]");
 
                 int id = toInt(arguments.elementAt(1));
-                int customer = m_resourceManager.newCustomer(id);
 
-                System.out.println("Add customer ID: " + customer);
+                JSONObject request = RequestFactory.getAddCustomerRequest(id);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                int cid = result.getInt(RESULT);
+
+                System.out.println("Add customer ID: " + cid);
+                success = true;
                 break;
             }
             case AddCustomerID: {
@@ -151,8 +198,13 @@ public abstract class Client {
                 int id = toInt(arguments.elementAt(1));
                 int customerID = toInt(arguments.elementAt(2));
 
-                if (m_resourceManager.newCustomer(id, customerID)) {
+                JSONObject request = RequestFactory.getAddCustomerIdRequest(id, customerID);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Add customer ID: " + customerID);
+                    success = true;
                 } else {
                     System.out.println("Customer could not be added");
                 }
@@ -167,8 +219,13 @@ public abstract class Client {
                 int id = toInt(arguments.elementAt(1));
                 int flightNum = toInt(arguments.elementAt(2));
 
-                if (m_resourceManager.deleteFlight(id, flightNum)) {
+                JSONObject request = RequestFactory.getDeleteFlightRequest(id, flightNum);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Flight Deleted");
+                    success = true;
                 } else {
                     System.out.println("Flight could not be deleted");
                 }
@@ -183,8 +240,13 @@ public abstract class Client {
                 int id = toInt(arguments.elementAt(1));
                 String location = arguments.elementAt(2);
 
-                if (m_resourceManager.deleteCars(id, location)) {
+                JSONObject request = RequestFactory.getDeleteCarRequest(id, location);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Cars Deleted");
+                    success = true;
                 } else {
                     System.out.println("Cars could not be deleted");
                 }
@@ -194,13 +256,18 @@ public abstract class Client {
                 checkArgumentsCount(3, arguments.size());
 
                 System.out.println("Deleting all rooms at a particular location [xid=" + arguments.elementAt(1) + "]");
-                System.out.println("-Car Location: " + arguments.elementAt(2));
+                System.out.println("-Room Location: " + arguments.elementAt(2));
 
                 int id = toInt(arguments.elementAt(1));
                 String location = arguments.elementAt(2);
 
-                if (m_resourceManager.deleteRooms(id, location)) {
+                JSONObject request = RequestFactory.getDeleteRoomRequest(id, location);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Rooms Deleted");
+                    success = true;
                 } else {
                     System.out.println("Rooms could not be deleted");
                 }
@@ -215,8 +282,13 @@ public abstract class Client {
                 int id = toInt(arguments.elementAt(1));
                 int customerID = toInt(arguments.elementAt(2));
 
-                if (m_resourceManager.deleteCustomer(id, customerID)) {
+                JSONObject request = RequestFactory.getDeleteCustomerRequest(id, customerID);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Customer Deleted");
+                    success = true;
                 } else {
                     System.out.println("Customer could not be deleted");
                 }
@@ -231,8 +303,13 @@ public abstract class Client {
                 int id = toInt(arguments.elementAt(1));
                 int flightNum = toInt(arguments.elementAt(2));
 
-                int seats = m_resourceManager.queryFlight(id, flightNum);
+                JSONObject request = RequestFactory.getQueryFlightRequest(id, flightNum);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                int seats = result.getInt(RESULT);
                 System.out.println("Number of seats available: " + seats);
+                success = true;
                 break;
             }
             case QueryCars: {
@@ -244,8 +321,13 @@ public abstract class Client {
                 int id = toInt(arguments.elementAt(1));
                 String location = arguments.elementAt(2);
 
-                int numCars = m_resourceManager.queryCars(id, location);
+                JSONObject request = RequestFactory.getQueryCarRequest(id, location);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                int numCars = result.getInt(RESULT);
                 System.out.println("Number of cars at this location: " + numCars);
+                success = true;
                 break;
             }
             case QueryRooms: {
@@ -257,8 +339,13 @@ public abstract class Client {
                 int id = toInt(arguments.elementAt(1));
                 String location = arguments.elementAt(2);
 
-                int numRoom = m_resourceManager.queryRooms(id, location);
+                JSONObject request = RequestFactory.getQueryRoomRequest(id, location);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                int numRoom = result.getInt(RESULT);
                 System.out.println("Number of rooms at this location: " + numRoom);
+                success = true;
                 break;
             }
             case QueryCustomer: {
@@ -270,8 +357,14 @@ public abstract class Client {
                 int id = toInt(arguments.elementAt(1));
                 int customerID = toInt(arguments.elementAt(2));
 
-                String bill = m_resourceManager.queryCustomerInfo(id, customerID);
-                System.out.print(bill);
+                JSONObject request = RequestFactory.getQueryCustomerRequest(id, customerID);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if(result.has(RESULT)){
+                    System.out.print("Bill: " + result.getString(RESULT));
+                }
+                success = true;
                 break;
             }
             case QueryFlightPrice: {
@@ -283,8 +376,13 @@ public abstract class Client {
                 int id = toInt(arguments.elementAt(1));
                 int flightNum = toInt(arguments.elementAt(2));
 
-                int price = m_resourceManager.queryFlightPrice(id, flightNum);
+                JSONObject request = RequestFactory.getQueryFlightPriceRequest(id, flightNum);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                int price = result.getInt(RESULT);
                 System.out.println("Price of a seat: " + price);
+                success = true;
                 break;
             }
             case QueryCarsPrice: {
@@ -296,8 +394,13 @@ public abstract class Client {
                 int id = toInt(arguments.elementAt(1));
                 String location = arguments.elementAt(2);
 
-                int price = m_resourceManager.queryCarsPrice(id, location);
+                JSONObject request = RequestFactory.getQueryCarPriceRequest(id, location);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                int price = result.getInt(RESULT);
                 System.out.println("Price of cars at this location: " + price);
+                success = true;
                 break;
             }
             case QueryRoomsPrice: {
@@ -309,8 +412,13 @@ public abstract class Client {
                 int id = toInt(arguments.elementAt(1));
                 String location = arguments.elementAt(2);
 
-                int price = m_resourceManager.queryRoomsPrice(id, location);
+                JSONObject request = RequestFactory.getQueryRoomPriceRequest(id, location);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                int price = result.getInt(RESULT);
                 System.out.println("Price of rooms at this location: " + price);
+                success = true;
                 break;
             }
             case ReserveFlight: {
@@ -324,8 +432,13 @@ public abstract class Client {
                 int customerID = toInt(arguments.elementAt(2));
                 int flightNum = toInt(arguments.elementAt(3));
 
-                if (m_resourceManager.reserveFlight(id, customerID, flightNum)) {
+                JSONObject request = RequestFactory.getReserveFlightRequest(id, customerID, flightNum);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Flight Reserved");
+                    success = true;
                 } else {
                     System.out.println("Flight could not be reserved");
                 }
@@ -342,8 +455,13 @@ public abstract class Client {
                 int customerID = toInt(arguments.elementAt(2));
                 String location = arguments.elementAt(3);
 
-                if (m_resourceManager.reserveCar(id, customerID, location)) {
+                JSONObject request = RequestFactory.getReserveCarRequest(id, customerID, location);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Car Reserved");
+                    success = true;
                 } else {
                     System.out.println("Car could not be reserved");
                 }
@@ -360,8 +478,13 @@ public abstract class Client {
                 int customerID = toInt(arguments.elementAt(2));
                 String location = arguments.elementAt(3);
 
-                if (m_resourceManager.reserveRoom(id, customerID, location)) {
+                JSONObject request = RequestFactory.getReserveRoomRequest(id, customerID, location);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Room Reserved");
+                    success = true;
                 } else {
                     System.out.println("Room could not be reserved");
                 }
@@ -369,10 +492,9 @@ public abstract class Client {
             }
             case Bundle: {
                 if (arguments.size() < 7) {
-                    System.err.println((char) 27 + "[31;1mCommand exception: " + (char) 27 + "[0mBundle command expects at least 7 arguments. Location \"help\" or \"help,<CommandName>\"");
+                    System.err.println((char) 27 + "[31;1mCommand exception: " + (char) 27 + "[0mBundle command expects at least 7 arguments. Location \"Help\" or \"Help,<CommandName>\"");
                     break;
                 }
-
                 System.out.println("Reserving an bundle [xid=" + arguments.elementAt(1) + "]");
                 System.out.println("-Customer ID: " + arguments.elementAt(2));
                 for (int i = 0; i < arguments.size() - 6; ++i) {
@@ -388,21 +510,81 @@ public abstract class Client {
                     flightNumbers.addElement(arguments.elementAt(3 + i));
                 }
                 String location = arguments.elementAt(arguments.size() - 3);
-                boolean car = toBoolean(arguments.elementAt(arguments.size() - 2));
-                boolean room = toBoolean(arguments.elementAt(arguments.size() - 1));
+                boolean bookCar = toBoolean(arguments.elementAt(arguments.size() - 2));
+                boolean bookRoom = toBoolean(arguments.elementAt(arguments.size() - 1));
 
-                if (m_resourceManager.bundle(id, customerID, flightNumbers, location, car, room)) {
+                JSONObject request = RequestFactory.getBundleRequest(id, customerID, flightNumbers, location, bookCar, bookRoom);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
                     System.out.println("Bundle Reserved");
+                    success = true;
                 } else {
                     System.out.println("Bundle could not be reserved");
                 }
                 break;
             }
-            case Quit:
+            case Quit: {
                 checkArgumentsCount(1, arguments.size());
 
                 System.out.println("Quitting client");
                 System.exit(0);
+                break;
+            }
+            case Commit: {
+                checkArgumentsCount(2, arguments.size());
+                int xid = toInt(arguments.elementAt(1));
+                System.out.println("Committing the transaction [xid=" + xid + "]");
+
+                JSONObject request = RequestFactory.getCommitRequest(xid);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
+                    System.out.println("Transaction committed");
+                    success = true;
+                } else {
+                    System.out.println("Unable to commit the transaction. See server logs");
+                }
+                break;
+            }
+            case Abort: {
+                checkArgumentsCount(2, arguments.size());
+                int xid = toInt(arguments.elementAt(1));
+                System.out.println("Aborting the transaction [xid=" + xid + "]");
+
+                JSONObject request = RequestFactory.getAbortRequest(xid);
+                JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
+
+                validate(result);
+                if (result.getBoolean(RESULT)) {
+                    System.out.println("Transaction aborted");
+                    success = true;
+                } else {
+                    System.out.println("Unable to abort the transaction. See server logs");
+                }
+                break;
+            }
+            case Shutdown: {
+                checkArgumentsCount(1, arguments.size());
+                System.out.println("Shutting down all servers");
+                JSONObject request = RequestFactory.getShutdownRequest();
+                SocketUtils.send(request, middlewareWriter);
+                break;
+            }
+
+        }
+        return success;
+    }
+
+    private void validate(JSONObject result) throws JSONException, TransactionAbortException, InvalidTransactionException {
+        if(result.has(VALID_XID) && !result.getBoolean(VALID_XID)) {
+            throw new InvalidTransactionException("No active transactions with the given XID");
+        }
+
+        if(result.has(ABORTED) && result.getBoolean(ABORTED)) {
+            throw new TransactionAbortException("Transaction aborted. See server logs.");
         }
     }
 
@@ -420,7 +602,7 @@ public abstract class Client {
 
     public static void checkArgumentsCount(Integer expected, Integer actual) throws IllegalArgumentException {
         if (expected != actual) {
-            throw new IllegalArgumentException("Invalid number of arguments. Expected " + (expected - 1) + ", received " + (actual - 1) + ". Location \"help,<CommandName>\" to check usage of this command");
+            throw new IllegalArgumentException("Invalid number of arguments. Expected " + (expected - 1) + ", received " + (actual - 1) + ". Location \"Help,<CommandName>\" to check usage of this command");
         }
     }
 
