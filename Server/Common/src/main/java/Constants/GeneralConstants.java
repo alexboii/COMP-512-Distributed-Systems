@@ -86,5 +86,7 @@ public class GeneralConstants {
     // FILES
     public static final String TEMP_FOLDER = "tmp";
     public static final String DATA_EXTENSION = ".data";
-
+    public static final String COMMITTED_FLAG = "COMMITTED";
+    public static final String SNAPSHOT_FLAG = "SNAPSHOT";
+    public static final String COORDINATOR_FLAG = "COORDINATOR";
 }

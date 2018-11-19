@@ -7,11 +7,16 @@ import Persistence.PersistedFile;
 import Utilities.FileLogger;
 import LockManager.*;
 
+import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
+
+import static Constants.GeneralConstants.COMMITTED_FLAG;
+import static Constants.GeneralConstants.SNAPSHOT_FLAG;
 
 /**
  * Implements 2 Phase Locking
@@ -19,10 +24,10 @@ import java.util.logging.Logger;
 public class TransactionManager {
 
     private LockManager lockManager;
-    private Map<Integer, Snapshot> snapshots;
+    private transient Map<Integer, Snapshot> snapshots;
     private PersistedFile<Map<Integer, Snapshot>> persistedSnapshot;
-    private RMHashMap mData;
-    private PersistedFile<RMHashMap> persistedCommitedData;
+    private transient RMHashMap mData;
+    private PersistedFile<RMHashMap> persistedCommittedData;
     private String rmName;
 
     private static final Logger logger = FileLogger.getLogger(TransactionManager.class);
@@ -33,17 +38,23 @@ public class TransactionManager {
         this.mData = new RMHashMap();
         this.rmName = rmName;
 
-        this.persistedSnapshot = new Pers
+        this.persistedSnapshot = new PersistedFile<>(rmName, SNAPSHOT_FLAG);
+        this.persistedCommittedData = new PersistedFile<>(rmName, COMMITTED_FLAG);
 
+        this.loadData();
     }
 
-    private class Snapshot implements Serializable {
-        private Map<String, ResourceItem> writeSet;
-        private Set<String> deleteSet;
+    private static class Snapshot implements Serializable {
+
+        private static final long serialVersionUID = 1415726875793785707L;
+
+        private transient Map<String, ResourceItem> writeSet;
+        private transient Set<String> deleteSet;
 
         Snapshot() {
             this.writeSet = new ConcurrentHashMap<>();
-            this.deleteSet = ConcurrentHashMap.newKeySet();
+            // keep this as hash set, otherwise it fails to persist
+            this.deleteSet = new HashSet<>();
         }
 
         public Map<String, ResourceItem> getWriteSet() {
@@ -52,6 +63,17 @@ public class TransactionManager {
 
         public Set<String> getDeleteSet() {
             return deleteSet;
+        }
+    }
+
+    private void loadData() {
+        try {
+            logger.info("Loading data for " + this.rmName);
+            this.snapshots = this.persistedSnapshot.read();
+            this.mData = this.persistedCommittedData.read();
+        } catch (IOException | ClassNotFoundException e) {
+            logger.info("Unable to load data for " + this.rmName);
+            e.printStackTrace();
         }
     }
 
@@ -106,11 +128,11 @@ public class TransactionManager {
     public ResourceItem readDataTransaction(int xid, String key) throws DeadlockException {
         lockManager.Lock(xid, key, TransactionLockObject.LockType.LOCK_READ);
 
-        if (snapshots.get(xid).getDeleteSet() != null && snapshots.get(xid).getDeleteSet().contains(key)) {
+        if (snapshots.get(xid) != null && snapshots.get(xid).getDeleteSet().contains(key)) {
             return null;
         }
 
-        if (snapshots.get(xid).writeSet != null && snapshots.get(xid).getWriteSet().get(key) != null) {
+        if (snapshots.get(xid) != null && snapshots.get(xid).getWriteSet().get(key) != null) {
             return snapshots.get(xid).getWriteSet().get(key);
         }
 
@@ -133,6 +155,8 @@ public class TransactionManager {
         if (snapshots.get(xid).getDeleteSet().contains(xid)) {
             snapshots.get(xid).getDeleteSet().remove(key);
         }
+
+        this.persistSnapshot();
     }
 
     /**
@@ -148,8 +172,30 @@ public class TransactionManager {
         if (snapshots.get(xid) != null) {
             snapshots.get(xid).getWriteSet().remove(key);
             snapshots.get(xid).getDeleteSet().add(key);
+
+            this.persistSnapshot();
         }
 
+    }
+
+    public void persistSnapshot() {
+        try {
+            this.persistedSnapshot.save(snapshots);
+            logger.info("Successfully saved snapshot for " + rmName);
+        } catch (IOException e) {
+            logger.info("Unable to write snapshot to disk for " + rmName);
+            e.printStackTrace();
+        }
+    }
+
+    public void persistData() {
+        try {
+            this.persistedCommittedData.save(mData);
+            logger.info("Successfully saved committed data for " + rmName);
+        } catch (IOException e) {
+            e.printStackTrace();
+            logger.info("Unable to write committed data to disk for " + rmName);
+        }
     }
 
     public void commit(int xid) {
@@ -162,6 +208,7 @@ public class TransactionManager {
         }
 
         clear(xid);
+        this.persistData();
     }
 
     public void abort(int xid) {

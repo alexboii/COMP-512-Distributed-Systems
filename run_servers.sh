@@ -15,7 +15,7 @@ COMMON_SERVER="mimi.cs.mcgill.ca"
 CARS_SERVER="lab2-11.cs.mcgill.ca"
 FLIGHTS_SERVER="lab2-12.cs.mcgill.ca"
 ROOMS_SERVER="lab2-13.cs.mcgill.ca"
-MIDDLEWARE_SERVER="lab2-14.cs.mcgill.ca"
+MIDDLEWARE_SERVER="lab2-19.cs.mcgill.ca"
 ENTITIES_SERVERS="$CARS_SERVER $FLIGHTS_SERVER $ROOMS_SERVER $MIDDLEWARE_SERVER"
 
 #declare entities
