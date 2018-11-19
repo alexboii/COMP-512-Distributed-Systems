@@ -83,4 +83,8 @@ public class GeneralConstants {
     // DELAY
     public static final int TIMER_DELAY = 20000;
 
+    // FILES
+    public static final String TEMP_FOLDER = "tmp";
+    public static final String DATA_EXTENSION = ".data";
+
 }

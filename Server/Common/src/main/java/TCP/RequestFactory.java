@@ -1,4 +1,4 @@
-package Tcp;
+package TCP;
 
 import org.json.JSONArray;
 import org.json.JSONException;

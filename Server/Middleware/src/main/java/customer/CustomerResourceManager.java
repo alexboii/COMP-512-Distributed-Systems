@@ -17,6 +17,7 @@ public class CustomerResourceManager extends ResourceManager {
 
     public CustomerResourceManager() {
         super(serverName);
+
     }
 
     // Reserve an item

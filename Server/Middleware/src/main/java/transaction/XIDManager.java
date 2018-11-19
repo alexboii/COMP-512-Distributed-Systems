@@ -22,7 +22,7 @@ public class XIDManager {
 
     private static final Logger logger = FileLogger.getLogger(XIDManager.class);
 
-    public XIDManager(){
+    public XIDManager() {
         xid_counter = new AtomicInteger(0);
         activeTransactions = new ConcurrentHashMap<>();
     }
@@ -35,15 +35,14 @@ public class XIDManager {
     }
 
 
-
     public boolean validate(JSONObject request) throws JSONException {
-        if(request.get(TYPE).equals(TRANSACTION) && request.get(ACTION).equals(NEW_TRANSACTION)) {
+        if (request.get(TYPE).equals(TRANSACTION) && request.get(ACTION).equals(NEW_TRANSACTION)) {
             return true;
         }
-        if(request.get(TYPE).equals(OTHERS) && request.get(ACTION).equals(SHUTDOWN)) {
+        if (request.get(TYPE).equals(OTHERS) && request.get(ACTION).equals(SHUTDOWN)) {
             return true;
         }
-        if(activeTransactions.containsKey(request.getInt(XID))){
+        if (activeTransactions.containsKey(request.getInt(XID))) {
             return true;
         }
         logger.severe("validation failed");

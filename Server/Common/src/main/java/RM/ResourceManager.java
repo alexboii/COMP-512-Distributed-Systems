@@ -18,12 +18,13 @@ import java.util.logging.Logger;
 
 abstract public class ResourceManager implements IResourceManager {
     protected String m_name = "";
-    protected TransactionManager transactionManager = new TransactionManager();
+    protected TransactionManager transactionManager;
 
     private static final Logger logger = FileLogger.getLogger(ResourceManager.class);
 
     public ResourceManager(String p_name) {
         m_name = p_name;
+        this.transactionManager = new TransactionManager(m_name);
     }
 
     // Query the number of available seats/rooms/cars
@@ -174,7 +175,7 @@ abstract public class ResourceManager implements IResourceManager {
     }
 
     // Delete cars at a location
-    public boolean deleteCars(int xid, String location) throws DeadlockException{
+    public boolean deleteCars(int xid, String location) throws DeadlockException {
         return deleteItemTransaction(xid, Car.getKey(location));
     }
 

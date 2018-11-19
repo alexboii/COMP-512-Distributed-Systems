@@ -3,8 +3,8 @@ package cars;
 import Constants.ServerConstants;
 import LockManager.DeadlockException;
 import RM.ResourceManager;
-import Tcp.IServer;
-import Tcp.SocketUtils;
+import TCP.IServer;
+import TCP.SocketUtils;
 import Utilities.FileLogger;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -13,7 +13,7 @@ import java.io.*;
 import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
-import static Tcp.SocketUtils.sendReply;
+import static TCP.SocketUtils.sendReply;
 
 public class CarServer extends ResourceManager implements IServer {
 

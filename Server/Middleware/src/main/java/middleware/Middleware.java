@@ -3,9 +3,9 @@ package middleware;
 import Constants.ServerConstants;
 import LockManager.DeadlockException;
 import RM.ResourceManager;
-import Tcp.IServer;
-import Tcp.RequestFactory;
-import Tcp.SocketUtils;
+import TCP.IServer;
+import TCP.RequestFactory;
+import TCP.SocketUtils;
 import Utilities.FileLogger;
 import customer.CustomerResourceManager;
 import org.json.JSONArray;
@@ -19,7 +19,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.sql.Time;
 import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
@@ -29,8 +28,8 @@ import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
 import static Constants.ServerConstants.MIDDLEWARE_SERVER_ADDRESS;
-import static Tcp.SocketUtils.sendReply;
-import static Tcp.SocketUtils.sendReplyToClient;
+import static TCP.SocketUtils.sendReply;
+import static TCP.SocketUtils.sendReplyToClient;
 
 public class Middleware extends ResourceManager implements IServer {
     private static final String serverName = "Middleware";

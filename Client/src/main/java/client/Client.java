@@ -1,7 +1,7 @@
 package client;
 
-import Tcp.RequestFactory;
-import Tcp.SocketUtils;
+import TCP.RequestFactory;
+import TCP.SocketUtils;
 import Utilities.InvalidTransactionException;
 import org.json.JSONException;
 import org.json.JSONObject;
