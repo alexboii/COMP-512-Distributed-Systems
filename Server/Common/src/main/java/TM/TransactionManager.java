@@ -24,9 +24,9 @@ import static Constants.GeneralConstants.SNAPSHOT_FLAG;
 public class TransactionManager {
 
     private LockManager lockManager;
-    private transient Map<Integer, Snapshot> snapshots;
+    private Map<Integer, Snapshot> snapshots;
     private PersistedFile<Map<Integer, Snapshot>> persistedSnapshot;
-    private transient RMHashMap mData;
+    private RMHashMap mData;
     private PersistedFile<RMHashMap> persistedCommittedData;
     private String rmName;
 
@@ -48,8 +48,8 @@ public class TransactionManager {
 
         private static final long serialVersionUID = 1415726875793785707L;
 
-        private transient Map<String, ResourceItem> writeSet;
-        private transient Set<String> deleteSet;
+        private Map<String, ResourceItem> writeSet;
+        private Set<String> deleteSet;
 
         Snapshot() {
             this.writeSet = new ConcurrentHashMap<>();
@@ -128,11 +128,11 @@ public class TransactionManager {
     public ResourceItem readDataTransaction(int xid, String key) throws DeadlockException {
         lockManager.Lock(xid, key, TransactionLockObject.LockType.LOCK_READ);
 
-        if (snapshots.get(xid) != null && snapshots.get(xid).getDeleteSet().contains(key)) {
+        if (snapshots.get(xid) != null && snapshots.get(xid).getDeleteSet() != null && snapshots.get(xid).getDeleteSet().contains(key)) {
             return null;
         }
 
-        if (snapshots.get(xid) != null && snapshots.get(xid).getWriteSet().get(key) != null) {
+        if (snapshots.get(xid) != null && snapshots.get(xid).getWriteSet() != null && snapshots.get(xid).getWriteSet().get(key) != null) {
             return snapshots.get(xid).getWriteSet().get(key);
         }
 
@@ -205,9 +205,11 @@ public class TransactionManager {
         if (snapshots.get(xid) != null) {
             snapshots.get(xid).getWriteSet().forEach((key, value) -> commitData(key, value));
             snapshots.get(xid).getDeleteSet().forEach(key -> removeDataAndCommit(key));
+
+            clear(xid);
         }
 
-        clear(xid);
+
         this.persistData();
     }
 
