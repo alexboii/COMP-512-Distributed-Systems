@@ -216,16 +216,19 @@ public class TransactionManager {
     public void abort(int xid) {
         logger.info("Aborting xid: " + xid);
         clear(xid);
+        this.persistSnapshot();
     }
 
     private void clear(int xid) {
-        logger.info("Removing local WriteSet(xid=" + xid + ") = " + snapshots.get(xid).getWriteSet());
-        logger.info("Removing local DeleteSet(xid=" + xid + ") = " + snapshots.get(xid).getDeleteSet());
+        if (snapshots.get(xid) != null) {
+            logger.info("Removing local WriteSet(xid=" + xid + ") = " + snapshots.get(xid).getWriteSet());
+            logger.info("Removing local DeleteSet(xid=" + xid + ") = " + snapshots.get(xid).getDeleteSet());
 
-        snapshots.remove(xid);
+            snapshots.remove(xid);
 
-        logger.info("Releasing all locks held by transaction: " + xid);
-        lockManager.UnlockAll(xid);
+            logger.info("Releasing all locks held by transaction: " + xid);
+            lockManager.UnlockAll(xid);
+        }
     }
 
 }
