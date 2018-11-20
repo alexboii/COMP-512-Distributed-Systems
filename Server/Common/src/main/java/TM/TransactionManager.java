@@ -6,6 +6,8 @@ import Model.ResourceItem;
 import Persistence.PersistedFile;
 import Utilities.FileLogger;
 import LockManager.*;
+import Utilities.InvalidTransactionException;
+import Utilities.TransactionAbortException;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -178,27 +180,41 @@ public class TransactionManager {
 
     }
 
-    public void persistSnapshot() {
+    public boolean voteReply(int xid) {
+        // TODO: Unsure -- should we be persisting all transactions at the same time, or just the transaction with which the reply is concerned?
+        // Also, if something comes during this time, (another request) for said transaction, do we ignore it? do we care?
+        return this.persistSnapshot();
+    }
+
+
+    public boolean persistSnapshot() {
         try {
             this.persistedSnapshot.save(snapshots);
             logger.info("Successfully saved snapshot for " + rmName);
+
         } catch (IOException e) {
-            logger.info("Unable to write snapshot to disk for " + rmName);
             e.printStackTrace();
+            logger.info("Unable to write snapshot data to disk for " + rmName);
+            return false;
         }
+
+        return true;
     }
 
-    public void persistData() {
+    public boolean persistData() {
         try {
             this.persistedCommittedData.save(mData);
             logger.info("Successfully saved committed data for " + rmName);
         } catch (IOException e) {
             e.printStackTrace();
             logger.info("Unable to write committed data to disk for " + rmName);
+            return false;
         }
+
+        return true;
     }
 
-    public void commit(int xid) {
+    public boolean commit(int xid) {
 
         logger.info("Committing xid: " + xid);
 
@@ -210,13 +226,13 @@ public class TransactionManager {
         }
 
 
-        this.persistData();
+        return this.persistData();
     }
 
-    public void abort(int xid) {
+    public boolean abort(int xid) {
         logger.info("Aborting xid: " + xid);
         clear(xid);
-        this.persistSnapshot();
+        return this.persistSnapshot();
     }
 
     private void clear(int xid) {

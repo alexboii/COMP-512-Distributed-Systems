@@ -64,7 +64,6 @@ public class XIDManager {
         logger.info("RMs involved " + rms);
         persistData();
         return rms;
-
     }
 
     public Map<Integer, Set> getActiveTransactions() {

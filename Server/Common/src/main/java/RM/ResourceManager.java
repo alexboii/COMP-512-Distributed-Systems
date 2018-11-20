@@ -288,16 +288,20 @@ abstract public class ResourceManager implements IResourceManager {
         return false;
     }
 
+    public boolean voteReply(int xid) {
+        return transactionManager.voteReply(xid);
+    }
+
     public String getName() {
         return m_name;
     }
 
-    public void commit(int id) {
-        transactionManager.commit(id);
+    public boolean commit(int id) {
+        return transactionManager.commit(id);
     }
 
-    public void abort(int id) {
-        transactionManager.abort(id);
+    public boolean abort(int id) {
+        return transactionManager.abort(id);
     }
 }
 

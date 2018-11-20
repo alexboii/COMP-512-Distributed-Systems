@@ -149,6 +149,31 @@ public class CarServer extends ResourceManager implements IServer {
                 logger.info("Shutting down");
                 System.exit(0);
                 break;
+
+            case VOTE_REQUEST:
+                xid = request.getInt(XID);
+                result = voteReply(xid);
+                sendReply(writer, result, deadlock);
+
+                if (!result) {
+                    abort(xid);
+                }
+
+                break;
+
+            case GET_DECISION:
+                xid = request.getInt(XID);
+                boolean type = request.getBoolean(DECISION_FIELD);
+
+                if(type) {
+                    result = commit(xid);
+                } else {
+                    result = abort(xid);
+                }
+
+                sendReply(writer, result, deadlock);
+
+                break;
         }
 
     }
