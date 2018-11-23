@@ -13,7 +13,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import transaction.XIDManager;
 
-import javax.swing.text.html.Option;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -28,7 +27,6 @@ import static Constants.GeneralConstants.*;
 import static Constants.ServerConstants.MIDDLEWARE_SERVER_ADDRESS;
 import static TCP.RequestFactory.getDecisionRequest;
 import static TCP.RequestFactory.getVoteRequest;
-import static TCP.SocketUtils.sendAndReceive;
 import static TCP.SocketUtils.sendReply;
 import static TCP.SocketUtils.sendReplyToClient;
 
@@ -212,7 +210,7 @@ public class Middleware extends ResourceManager implements IServer {
 
                         break;
 
-                    case GET_DECISION:
+                    case DECISION:
                         xid = request.getInt(XID);
                         boolean type = request.getBoolean(DECISION_FIELD);
 

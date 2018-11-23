@@ -168,7 +168,7 @@ public class RoomsServer extends ResourceManager implements IServer {
 
                 break;
 
-            case GET_DECISION:
+            case DECISION:
                 xid = request.getInt(XID);
                 boolean type = request.getBoolean(DECISION_FIELD);
 

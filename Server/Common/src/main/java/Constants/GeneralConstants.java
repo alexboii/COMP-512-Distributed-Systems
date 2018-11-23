@@ -77,7 +77,7 @@ public class GeneralConstants {
     public static final String ABORT = "Abort";
     public static final String VALID_XID = "ValidXid";
     public static final String VOTE_REQUEST = "VoteRequest";
-    public static final String GET_DECISION = "GetDecision";
+    public static final String DECISION = "GetDecision";
     public static final String DECISION_FIELD = "Decision";
 
     //SHUTDOWN

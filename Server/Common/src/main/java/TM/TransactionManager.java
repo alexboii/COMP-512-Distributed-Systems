@@ -223,6 +223,7 @@ public class TransactionManager {
             snapshots.get(xid).getDeleteSet().forEach(key -> removeDataAndCommit(key));
 
             clear(xid);
+            this.persistSnapshot();
         }
 
 
@@ -243,6 +244,7 @@ public class TransactionManager {
             snapshots.remove(xid);
 
             logger.info("Releasing all locks held by transaction: " + xid);
+
             lockManager.UnlockAll(xid);
         }
     }

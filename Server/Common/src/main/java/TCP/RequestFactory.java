@@ -300,7 +300,7 @@ public class RequestFactory {
         JSONObject request = new JSONObject();
 
         request.put(TYPE, TRANSACTION);
-        request.put(ACTION, GET_DECISION);
+        request.put(ACTION, DECISION);
         request.put(XID, xid);
         request.put(DECISION_FIELD, decision);
 
