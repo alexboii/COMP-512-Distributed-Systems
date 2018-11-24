@@ -1,15 +1,15 @@
 package transaction;
 
+import Constants.TransactionConstants.STATUS;
+import Model.ResourceItem;
 import Persistence.PersistedFile;
 import Utilities.FileLogger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.io.Serializable;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
@@ -19,13 +19,14 @@ import static Constants.GeneralConstants.*;
 public class XIDManager {
 
     private AtomicInteger xid_counter;
-    private PersistedFile<Map<Integer, Set>> persistedTransactions;
+    private PersistedFile<Map<Integer, ActiveTransaction>> persistedTransactions;
     private final String COORDINATOR_NAME = "coordinator";
 
-    public Map<Integer, Set> activeTransactions;
+    public Map<Integer, ActiveTransaction> activeTransactions;
 
 
     private static final Logger logger = FileLogger.getLogger(XIDManager.class);
+
 
     public XIDManager() {
         xid_counter = new AtomicInteger(0);
@@ -38,7 +39,7 @@ public class XIDManager {
     public int newTransaction() {
         int xid = xid_counter.getAndAdd(1);
         logger.info("New xid=" + xid);
-        activeTransactions.put(xid, ConcurrentHashMap.newKeySet(4));
+        activeTransactions.put(xid, new ActiveTransaction());
         persistData();
         return xid;
     }
@@ -60,18 +61,18 @@ public class XIDManager {
 
     public Set<String> completeTransaction(int xid) {
         logger.info("Completing transaction xid=" + xid);
-        Set rms = activeTransactions.remove(xid);
+        Set rms = activeTransactions.remove(xid).getParticipants();
         logger.info("RMs involved " + rms);
         persistData();
         return rms;
     }
 
-    public Map<Integer, Set> getActiveTransactions() {
+    public Map<Integer, ActiveTransaction> getActiveTransactions() {
         return activeTransactions;
     }
 
     public void addRM(int xid, String RM) {
-        activeTransactions.get(xid).add(RM);
+        activeTransactions.get(xid).getParticipants().add(RM);
         persistData();
     }
 
@@ -79,6 +80,10 @@ public class XIDManager {
         try {
             logger.info("Loading data for " + COORDINATOR_NAME);
             this.activeTransactions = this.persistedTransactions.read();
+
+            for (int key : this.activeTransactions.keySet()) {
+                xid_counter.set(key > xid_counter.get() ? key : xid_counter.get());
+            }
         } catch (IOException | ClassNotFoundException e) {
             logger.info("Unable to load data for " + COORDINATOR_NAME);
             e.printStackTrace();
@@ -96,4 +101,11 @@ public class XIDManager {
     }
 
 
+    public AtomicInteger getXid_counter() {
+        return xid_counter;
+    }
+
+    public void setXid_counter(AtomicInteger xid_counter) {
+        this.xid_counter = xid_counter;
+    }
 }

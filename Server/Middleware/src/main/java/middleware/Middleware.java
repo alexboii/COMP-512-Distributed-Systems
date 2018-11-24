@@ -1,6 +1,7 @@
 package middleware;
 
 import Constants.ServerConstants;
+import Constants.TransactionConstants.STATUS;
 import LockManager.DeadlockException;
 import RM.ResourceManager;
 import TCP.IServer;
@@ -49,8 +50,31 @@ public class Middleware extends ResourceManager implements IServer {
         customerManager = new CustomerResourceManager();
         xIDManager = new XIDManager();
         timers = new ConcurrentHashMap<>();
+        loadData();
     }
 
+    private void loadData() {
+        xIDManager.getActiveTransactions().keySet().forEach(key -> {
+            switch (xIDManager.getActiveTransactions().get(key).getStatus()) {
+                case ACTIVE:
+                    resetTimeout(key);
+                    break;
+                case ABORTED:
+                case PREPARED:
+                    try {
+                        abortAll(key);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                case COMMMITTED:
+                    sendDecision(key, true);
+                    break;
+                default:
+                    break;
+            }
+        });
+    }
 
     @Override
     public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
@@ -241,7 +265,8 @@ public class Middleware extends ResourceManager implements IServer {
     }
 
     private boolean voteRequest(int xid) {
-        Set<String> rms = xIDManager.activeTransactions.get(xid);
+        Set<String> rms = xIDManager.activeTransactions.get(xid).getParticipants();
+        xIDManager.activeTransactions.get(xid).setStatus(STATUS.PREPARED);
         logger.info("Sending vote request to " + rms);
 
         for (String rm : rms) {
@@ -270,7 +295,8 @@ public class Middleware extends ResourceManager implements IServer {
     }
 
     private void sendDecision(int xid, boolean decision) {
-        Set<String> rms = xIDManager.completeTransaction(xid);
+        Set<String> rms = xIDManager.activeTransactions.get(xid).getParticipants();
+        xIDManager.activeTransactions.get(xid).setStatus((decision) ? STATUS.COMMMITTED : STATUS.ABORTED);
         logger.info("Sending vote request to " + rms);
 
         for (String rm : rms) {
@@ -298,6 +324,7 @@ public class Middleware extends ResourceManager implements IServer {
             timers.remove(xid);
         }
 
+        xIDManager.completeTransaction(xid);
     }
 
 
