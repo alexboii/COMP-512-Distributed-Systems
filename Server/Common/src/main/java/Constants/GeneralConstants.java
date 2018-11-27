@@ -18,6 +18,7 @@ public class GeneralConstants {
     public static final String CAR_ENTITY = "cars";
     public static final String CUSTOMER_ENTITY = "customer";
     public static final String TRANSACTION = "transaction";
+    public static final String CRASH = "crash";
     public static final String OTHERS = "others";
 
     //CAR
@@ -84,6 +85,13 @@ public class GeneralConstants {
 
     //SHUTDOWN
     public static final String SHUTDOWN = "Shutdown";
+
+    //CRASH
+    public static final String CRASH_MIDDLEWARE = "CrashMiddleware";
+    public static final String CRASH_RESOURCE_MANAGER = "CrashResourceManager";
+    public static final String RESOURCE_MANAGER_NAME = "ResourceManagerName";
+    public static final String RESET_CRASHES = "ResetCrashes";
+    public static final String CRASH_MODE = "CrashMode";
 
     // DELAY
     public static final int TIMER_DELAY = 60000;

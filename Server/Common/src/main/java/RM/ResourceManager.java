@@ -14,11 +14,13 @@ import LockManager.*;
 // -------------------------------
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 abstract public class ResourceManager implements IResourceManager {
     protected String m_name = "";
     protected TransactionManager transactionManager;
+    protected AtomicInteger rMCrashMode = new AtomicInteger(0);
 
     private static final Logger logger = FileLogger.getLogger(ResourceManager.class);
 
@@ -289,7 +291,22 @@ abstract public class ResourceManager implements IResourceManager {
     }
 
     public boolean voteReply(int xid) {
-        return transactionManager.voteReply(xid);
+
+        if (rMCrashMode.get() == 1){
+            //Crash after receive vote request but before sending answer
+            logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
+            System.exit(1);
+        }
+
+        boolean reply = transactionManager.voteReply(xid);
+
+        if (rMCrashMode.get() == 2){
+            //Crash after deciding which answer to send (commit/abort)
+            logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
+            System.exit(1);
+        }
+
+        return reply;
     }
 
     public String getName() {
@@ -302,6 +319,16 @@ abstract public class ResourceManager implements IResourceManager {
 
     public boolean abort(int id) {
         return transactionManager.abort(id);
+    }
+
+    protected void setRMCrashMode(int mode){
+        logger.info("Enabling Resource Manager crash mode=" + mode);
+        rMCrashMode.set(mode);
+    }
+
+    protected void resetCrash() {
+        logger.info("Resetting crash modes");
+        rMCrashMode.set(0);
     }
 }
 

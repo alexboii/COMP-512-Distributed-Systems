@@ -571,6 +571,41 @@ public abstract class Client {
                 System.out.println("Shutting down all servers");
                 JSONObject request = RequestFactory.getShutdownRequest();
                 SocketUtils.send(request, middlewareWriter);
+                success = true;
+                break;
+            }
+            case CrashMiddleware: {
+                checkArgumentsCount(2, arguments.size());
+                int mode = toInt(arguments.elementAt(1));
+                if (mode >= 1 && mode <= 8){
+                    System.out.println("Enable middleware crash. Mode=" + mode);
+                    JSONObject request = RequestFactory.getCrashMiddlewareRequest(mode);
+                    SocketUtils.send(request, middlewareWriter);
+                    success = true;
+                } else {
+                    System.out.println("Invalid middleware crash mode=" + mode);
+                }
+                break;
+            }
+            case CrashResourceManager: {
+                checkArgumentsCount(3, arguments.size());
+                String rm = arguments.elementAt(1);
+                int mode = toInt(arguments.elementAt(2));
+                if (mode >= 1 && mode <= 5){
+                    System.out.println("Enable resource manager crash. RM name=" + rm + " mode=" + mode);
+                    JSONObject request = RequestFactory.getCrashResourceManagerRequest(rm, mode);
+                    SocketUtils.send(request, middlewareWriter);
+                    success = true;
+                } else {
+                    System.out.println("Invalid resource manager crash mode=" + mode);
+                }
+                break;
+            }
+            case ResetCrashes: {
+                checkArgumentsCount(1, arguments.size());
+                System.out.println("Disable all crash modes");
+                JSONObject request = RequestFactory.getResetCrashesRequest();
+                SocketUtils.send(request, middlewareWriter);
                 break;
             }
 

@@ -286,6 +286,33 @@ public class RequestFactory {
         return request;
     }
 
+    public static JSONObject getCrashMiddlewareRequest(int mode) throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, CRASH);
+        request.put(ACTION, CRASH_MIDDLEWARE);
+        request.put(CRASH_MODE, mode);
+        return request;
+    }
+
+    public static JSONObject getCrashResourceManagerRequest(String resourceManager, int mode) throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, CRASH);
+        request.put(ACTION, CRASH_RESOURCE_MANAGER);
+        request.put(RESOURCE_MANAGER_NAME, resourceManager);
+        request.put(CRASH_MODE, mode);
+        return request;
+    }
+
+    public static JSONObject getResetCrashesRequest() throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, CRASH);
+        request.put(ACTION, RESET_CRASHES);
+        return request;
+    }
+
     public static JSONObject getVoteRequest(int xid) throws JSONException {
         JSONObject request = new JSONObject();
 

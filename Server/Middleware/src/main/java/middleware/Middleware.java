@@ -22,15 +22,18 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
-import static Constants.ServerConstants.MIDDLEWARE_SERVER_ADDRESS;
+import static Constants.ServerConstants.*;
 import static TCP.RequestFactory.getDecisionRequest;
 import static TCP.RequestFactory.getVoteRequest;
 import static TCP.SocketUtils.sendReply;
 import static TCP.SocketUtils.sendReplyToClient;
 import static TCP.SocketUtils.sendRequest;
+import static Utilities.RMNameServerUtil.nameToHost;
+import static Utilities.RMNameServerUtil.nameToPort;
 
 public class Middleware extends ResourceManager implements IServer {
     private static final String serverName = "Middleware";
@@ -38,6 +41,19 @@ public class Middleware extends ResourceManager implements IServer {
     public CustomerResourceManager customerManager;
     private XIDManager xIDManager;
     public Map<Integer, Timer> timers;
+
+    /**
+     0. No crash
+     1. Crash before sending vote request
+     2. Crash after sending vote request and before receiving any replies
+     3. Crash after receiving some replies but not all
+     4. Crash after receiving all replies but before deciding
+     5. Crash after deciding but before sending decision
+     6. Crash after sending some but not all decisions
+     7. Crash after having sent all decisions
+     8. Recovery of the coordinator
+     */
+    private AtomicInteger middlewareCrashMode = new AtomicInteger(0);
 
     private static final Logger logger = FileLogger.getLogger(Middleware.class);
 
@@ -274,6 +290,29 @@ public class Middleware extends ResourceManager implements IServer {
                         break;
                 }
                 break;
+
+            case CRASH:
+                switch ((String) request.get(ACTION)) {
+                    case CRASH_MIDDLEWARE:
+                        int mode = request.getInt(CRASH_MODE);
+                        middlewareCrashMode.set(mode);
+                        break;
+
+                    case CRASH_RESOURCE_MANAGER:
+                        String rm = request.getString(RESOURCE_MANAGER_NAME);
+                        mode = request.getInt(CRASH_MODE);
+                        sendRequest(nameToHost(rm), nameToPort(rm), request);
+                        break;
+
+                    case RESET_CRASHES:
+                        logger.info("Resetting all crash modes");
+                        sendRequest(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, request);
+                        sendRequest(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
+                        sendRequest(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
+                        middlewareCrashMode.set(0);
+                        break;
+                }
+                break;
         }
     }
 
@@ -281,6 +320,12 @@ public class Middleware extends ResourceManager implements IServer {
         Set<String> rms = xIDManager.activeTransactions.get(xid).getParticipants();
         xIDManager.activeTransactions.get(xid).setStatus(STATUS.PREPARED);
         logger.info("Sending vote request to " + rms);
+
+        if (middlewareCrashMode.get() == 1){
+            //Crash before sending vote request
+            logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
+            System.exit(1);
+        }
 
         for (String rm : rms) {
             String[] hostPort = rm.split(":");
@@ -320,13 +365,25 @@ public class Middleware extends ResourceManager implements IServer {
         }
 
         logger.info("Successfully completed voteRequest");
+        if (middlewareCrashMode.get() == 4){
+            //Crash after receiving all replies but before deciding
+            logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
+            System.exit(1);
+        }
         return true;
     }
 
     private void sendDecision(int xid, boolean decision) {
         Set<String> rms = xIDManager.activeTransactions.get(xid).getParticipants();
         xIDManager.activeTransactions.get(xid).setStatus((decision) ? STATUS.COMMITTED : STATUS.ABORTED);
-        logger.info("Sending vote request to " + rms);
+
+        if (middlewareCrashMode.get() == 5){
+            //Crash after deciding but before sending decision
+            logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
+            System.exit(1);
+        }
+
+        logger.info("Sending decision to " + rms);
 
         for (String rm : rms) {
             String[] hostPort = rm.split(":");
@@ -341,6 +398,12 @@ public class Middleware extends ResourceManager implements IServer {
                 logger.info("Returned false from sendDecision");
                 e.printStackTrace();
             }
+
+            if (middlewareCrashMode.get() == 6){
+                //Crash after sending some but not all decisions
+                logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
+                System.exit(1);
+            }
         }
 
         if (decision) {
@@ -348,6 +411,12 @@ public class Middleware extends ResourceManager implements IServer {
         } else {
             customerManager.abort(xid);
             timers.remove(xid);
+        }
+
+        if (middlewareCrashMode.get() == 7){
+            //Crash after having sent all decisions
+            logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
+            System.exit(1);
         }
 
         // xIDManager.completeTransaction(xid);

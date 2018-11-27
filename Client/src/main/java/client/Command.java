@@ -34,7 +34,12 @@ public enum Command {
 	Abort("Abort the transaction", "<xid>"),
 
 	Quit("Exit the client application", ""),
-	Shutdown("Exit all servers / resource managers", "");
+	Shutdown("Exit all servers / resource managers", ""),
+
+	CrashMiddleware("Crash middleware/coordinator at a specified point", "<mode>"),
+	CrashResourceManager("Crash resource manager/participant at a specified point", "<RM Name>,<mode>"),
+	ResetCrashes("Disable all crash modes", "");
+
 
 	String m_description;
 	String m_args;

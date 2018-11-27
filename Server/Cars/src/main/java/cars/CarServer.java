@@ -159,11 +159,23 @@ public class CarServer extends ResourceManager implements IServer {
                     abort(xid);
                 }
 
+                if (rMCrashMode.get() == 3){
+                    //Crash after sending answer
+                    logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
+                    System.exit(1);
+                }
+
                 break;
 
             case DECISION:
                 xid = request.getInt(XID);
                 boolean type = request.getBoolean(DECISION_FIELD);
+
+                if (rMCrashMode.get() == 4){
+                    //Crash after receiving decision but before committing/aborting
+                    logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
+                    System.exit(1);
+                }
 
                 if(type) {
                     result = commit(xid);
@@ -173,6 +185,15 @@ public class CarServer extends ResourceManager implements IServer {
 
                 sendReply(writer, result, deadlock);
 
+                break;
+
+            case CRASH_RESOURCE_MANAGER:
+                int mode = request.getInt(CRASH_MODE);
+                setRMCrashMode(mode);
+                break;
+
+            case RESET_CRASHES:
+                resetCrash();
                 break;
         }
 
