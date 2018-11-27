@@ -4,7 +4,7 @@ package Constants;
  * Created by alex on 9/25/18.
  */
 public class GeneralConstants {
-    public static final String groupPrefix = "group01";
+    public static final String GROUP_PREFIX = "group01";
 
     public static final String CHAR_SET = "UTF-8";
 
@@ -76,11 +76,25 @@ public class GeneralConstants {
     public static final String ABORTED = "Aborted";
     public static final String ABORT = "Abort";
     public static final String VALID_XID = "ValidXid";
+    public static final String VOTE_REQUEST = "VoteRequest";
+    public static final String DECISION = "DecisionRequest";
+    public static final String GET_DECISION = "GetDecision";
+    public static final String HAVE_COMMITTED = "HaveCommitted";
+    public static final String DECISION_FIELD = "Decision";
 
     //SHUTDOWN
     public static final String SHUTDOWN = "Shutdown";
 
     // DELAY
-    public static final int TIMER_DELAY = 20000;
+    public static final int TIMER_DELAY = 60000;
 
+    // FILES
+    public static final String TEMP_FOLDER = "tmp";
+    public static final String DATA_EXTENSION = ".data";
+    public static final String COMMITTED_FLAG = "COMMITTED";
+    public static final String SNAPSHOT_FLAG = "SNAPSHOT";
+    public static final String COORDINATOR_FLAG = "COORDINATOR";
+
+    // HAVE_COMMITTED
+    public static final String RM_ADDRESS = "Address";
 }

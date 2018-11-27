@@ -1,4 +1,4 @@
-package Tcp;
+package TCP;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -285,5 +285,48 @@ public class RequestFactory {
         request.put(ACTION, SHUTDOWN);
         return request;
     }
+
+    public static JSONObject getVoteRequest(int xid) throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, TRANSACTION);
+        request.put(ACTION, VOTE_REQUEST);
+        request.put(XID, xid);
+
+        return request;
+    }
+
+    public static JSONObject getDecisionRequest(int xid, boolean decision) throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, TRANSACTION);
+        request.put(ACTION, DECISION);
+        request.put(XID, xid);
+        request.put(DECISION_FIELD, decision);
+
+        return request;
+    }
+
+    public static JSONObject getGetDecisionRequest(int xid) throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, TRANSACTION);
+        request.put(ACTION, GET_DECISION);
+        request.put(XID, xid);
+
+        return request;
+    }
+
+    public static JSONObject getHaveCommittedRequest(int xid, String rmAddress) throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, TRANSACTION);
+        request.put(ACTION, HAVE_COMMITTED);
+        request.put(RM_ADDRESS, rmAddress);
+        request.put(XID, xid);
+
+        return request;
+    }
+
 }
 

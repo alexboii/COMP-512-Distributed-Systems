@@ -1,11 +1,12 @@
 package middleware;
 
 import Constants.ServerConstants;
+import Constants.TransactionConstants.STATUS;
 import LockManager.DeadlockException;
 import RM.ResourceManager;
-import Tcp.IServer;
-import Tcp.RequestFactory;
-import Tcp.SocketUtils;
+import TCP.IServer;
+import TCP.RequestFactory;
+import TCP.SocketUtils;
 import Utilities.FileLogger;
 import customer.CustomerResourceManager;
 import org.json.JSONArray;
@@ -19,18 +20,17 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.sql.Time;
-import java.util.Map;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
 import static Constants.ServerConstants.MIDDLEWARE_SERVER_ADDRESS;
-import static Tcp.SocketUtils.sendReply;
-import static Tcp.SocketUtils.sendReplyToClient;
+import static TCP.RequestFactory.getDecisionRequest;
+import static TCP.RequestFactory.getVoteRequest;
+import static TCP.SocketUtils.sendReply;
+import static TCP.SocketUtils.sendReplyToClient;
+import static TCP.SocketUtils.sendRequest;
 
 public class Middleware extends ResourceManager implements IServer {
     private static final String serverName = "Middleware";
@@ -51,8 +51,31 @@ public class Middleware extends ResourceManager implements IServer {
         customerManager = new CustomerResourceManager();
         xIDManager = new XIDManager();
         timers = new ConcurrentHashMap<>();
+        loadData();
     }
 
+    private void loadData() {
+        xIDManager.getActiveTransactions().keySet().forEach(key -> {
+            switch (xIDManager.getActiveTransactions().get(key).getStatus()) {
+                case ACTIVE:
+                    resetTimeout(key);
+                    break;
+                case ABORTED:
+                case PREPARED:
+                    try {
+                        abortAll(key);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                case COMMITTED:
+                    sendDecision(key, true);
+                    break;
+                default:
+                    break;
+            }
+        });
+    }
 
     @Override
     public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
@@ -192,13 +215,50 @@ public class Middleware extends ResourceManager implements IServer {
                         break;
 
                     case COMMIT:
-                        commitAll(request);
-                        sendReply(writer, true);
+                        boolRes = commitAll(request);
+                        sendReply(writer, boolRes);
                         break;
 
                     case ABORT:
                         abortAll(request.getInt(XID));
                         sendReply(writer, true);
+                        break;
+
+                    case VOTE_REQUEST:
+                        int xid = request.getInt(XID);
+                        boolRes = voteReply(xid);
+                        sendReply(writer, boolRes);
+
+                        if (!boolRes) {
+                            abort(xid);
+                        }
+
+                        break;
+
+                    case DECISION:
+                        xid = request.getInt(XID);
+                        boolean type = request.getBoolean(DECISION_FIELD);
+
+                        if (type) {
+                            boolRes = commit(xid);
+                        } else {
+                            boolRes = abort(xid);
+                        }
+
+                        sendReply(writer, boolRes);
+
+                        break;
+                    case GET_DECISION:
+                        xid = request.getInt(XID);
+                        boolRes = getDecision(xid);
+                        sendReply(writer, boolRes);
+                        break;
+
+                    case HAVE_COMMITTED:
+                        xid = request.getInt(XID);
+                        String rm = request.getString(RM_ADDRESS);
+
+                        processHaveCommitted(xid, rm);
                         break;
                 }
                 break;
@@ -217,12 +277,87 @@ public class Middleware extends ResourceManager implements IServer {
         }
     }
 
-    private void commitAll(JSONObject commitRequest) throws JSONException {
+    private boolean voteRequest(int xid) {
+        Set<String> rms = xIDManager.activeTransactions.get(xid).getParticipants();
+        xIDManager.activeTransactions.get(xid).setStatus(STATUS.PREPARED);
+        logger.info("Sending vote request to " + rms);
+
+        for (String rm : rms) {
+            String[] hostPort = rm.split(":");
+            String host = hostPort[0];
+
+            try {
+                JSONObject request = getVoteRequest(xid);
+                JSONObject result = sendAndReceiveAgnostic(host, Integer.parseInt(hostPort[1]), request, true);
+
+                // retry once to wait for vote
+                // transaction becomes blocked
+                if (result == null) {
+                    logger.info("Returned false from voteRequest because of bad request");
+                    logger.info("Retrying to acquire vote");
+
+                    Thread.sleep(40000);
+
+                    result = sendAndReceiveAgnostic(host, Integer.parseInt(hostPort[1]), request, true);
+
+                    // if second time is still bad, then
+                    if (result == null) {
+                        logger.info("Failed to acquire vote from second attempt");
+                        throw new JSONException("Invalid");
+                    }
+                }
+
+                // if one is false, we abort everything
+                if (!result.getBoolean(RESULT)) {
+                    return false;
+                }
+
+            } catch (JSONException | InterruptedException | DeadlockException e) {
+                logger.info("Returned false from voteRequest");
+                e.printStackTrace();
+                return false;
+            }
+        }
+
+        logger.info("Successfully completed voteRequest");
+        return true;
+    }
+
+    private void sendDecision(int xid, boolean decision) {
+        Set<String> rms = xIDManager.activeTransactions.get(xid).getParticipants();
+        xIDManager.activeTransactions.get(xid).setStatus((decision) ? STATUS.COMMITTED : STATUS.ABORTED);
+        logger.info("Sending vote request to " + rms);
+
+        for (String rm : rms) {
+            String[] hostPort = rm.split(":");
+            String host = hostPort[0];
+
+            try {
+                JSONObject request = getDecisionRequest(xid, decision);
+                sendRequest(host, Integer.parseInt(hostPort[1]), request);
+
+
+            } catch (JSONException e) {
+                logger.info("Returned false from sendDecision");
+                e.printStackTrace();
+            }
+        }
+
+        if (decision) {
+            customerManager.commit(xid);
+        } else {
+            customerManager.abort(xid);
+            timers.remove(xid);
+        }
+
+        // xIDManager.completeTransaction(xid);
+    }
+
+    private boolean commitAll(JSONObject commitRequest) throws JSONException {
         int xid = commitRequest.getInt(XID);
-        logger.info("Committing transaction: " + xid);
-        Set<String> rms = xIDManager.completeTransaction(xid);
-        sendRequestToRMs(commitRequest, rms);
-        customerManager.commit(xid);
+        boolean decision = voteRequest(xid);
+        sendDecision(xid, decision);
+        return decision;
     }
 
     private void abortAll(int xid) throws JSONException {
@@ -244,6 +379,25 @@ public class Middleware extends ResourceManager implements IServer {
         });
     }
 
+    private boolean getDecision(int xid) {
+        boolean reply = false;
+        if (xIDManager.getActiveTransactions().get(xid) != null) {
+            reply = xIDManager.getActiveTransactions().get(xid).getStatus() == STATUS.COMMITTED;
+        }
+
+        return reply;
+    }
+
+    private void processHaveCommitted(int xid, String rmAddress) {
+        if (xIDManager.getActiveTransactions().get(xid) != null) {
+            xIDManager.getActiveTransactions().get(xid).getParticipants().remove(rmAddress);
+
+            if (xIDManager.getActiveTransactions().get(xid).getParticipants().size() == 0) {
+                xIDManager.completeTransaction(xid);
+            }
+        }
+    }
+
     /**
      * Routing happens here
      *
@@ -252,10 +406,14 @@ public class Middleware extends ResourceManager implements IServer {
      * @param request
      * @return
      */
-    private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request) throws JSONException, DeadlockException {
+
+    private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request, Boolean... isTransactionOperation) throws JSONException, DeadlockException {
         JSONObject result = null;
         int xid = request.getInt(XID);
-        xIDManager.addRM(xid, serverAddress + ":" + port);
+
+        if (isTransactionOperation.length == 0) {
+            xIDManager.addRM(xid, serverAddress + ":" + port);
+        }
 
         try {
             logger.info("Sending request " + request + " to server: " + serverAddress + ":" + port);
@@ -280,22 +438,7 @@ public class Middleware extends ResourceManager implements IServer {
         return result;
     }
 
-    private void sendRequest(String serverAddress, int port, JSONObject request) {
 
-        try {
-            logger.info("Sending request " + request + " to server: " + serverAddress + ":" + port);
-            Socket server = new Socket(InetAddress.getByName(serverAddress), port);
-            OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
-
-            SocketUtils.send(request, writer);
-
-            server.close();
-            writer.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     public int newCustomer(JSONObject request) throws JSONException, DeadlockException {
         int xid = request.getInt(XID);
@@ -517,13 +660,15 @@ public class Middleware extends ResourceManager implements IServer {
 
             Timer timer = new Timer();
 
-            logger.info("created new timer");
+            logger.info("Created new timer for xid=" + id);
 
             timer.schedule(new TimerTask() {
                 @Override
                 public void run() {
                     if (xIDManager.getActiveTransactions().containsKey(id)) {
                         try {
+                            logger.info("Timer expiring for xid=" + id);
+
                             abortAll(id);
                         } catch (JSONException e) {
                             e.printStackTrace();

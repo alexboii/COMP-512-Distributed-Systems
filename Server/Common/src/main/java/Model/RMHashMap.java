@@ -1,19 +1,19 @@
 package Model;
 
+import java.io.Serializable;
 import java.util.*;
 
 // A specialization of HashMap with some extra diagnostics
-public class RMHashMap extends HashMap<String, ResourceItem>
-{
+public class RMHashMap extends HashMap<String, ResourceItem> implements Serializable {
+    private static final long serialVersionUID = 8906057021146269456L;
+
     public RMHashMap() {
         super();
     }
 
-    public String toString()
-    {
+    public String toString() {
         String s = "--- BEGIN RMHashMap ---\n";
-        for (String key : keySet())
-        {
+        for (String key : keySet()) {
             String value = get(key).toString();
             s = s + "[KEY='" + key + "']" + value + "\n";
         }
@@ -21,17 +21,14 @@ public class RMHashMap extends HashMap<String, ResourceItem>
         return s;
     }
 
-    public void dump()
-    {
+    public void dump() {
         System.out.println(toString());
     }
 
-    public Object clone()
-    {
+    public Object clone() {
         RMHashMap obj = new RMHashMap();
-        for (String key : keySet())
-        {
-            obj.put(key, (ResourceItem)get(key).clone());
+        for (String key : keySet()) {
+            obj.put(key, (ResourceItem) get(key).clone());
         }
         return obj;
     }

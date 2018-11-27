@@ -185,13 +185,13 @@ public interface IResourceManager
     /**
      * Abort the given transaction.
      */
-    public void abort(int id);
+    public boolean abort(int id);
 
 
     /**
      * Commit the given transaction.
      */
-    public void commit(int id);
+    public boolean commit(int id);
 
     /**
      * Method that each resource manager must implement in order to process requests properly

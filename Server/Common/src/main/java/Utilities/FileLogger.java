@@ -5,7 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.*;
 
-import static Constants.GeneralConstants.groupPrefix;
+import static Constants.GeneralConstants.GROUP_PREFIX;
 
 public class FileLogger {
 
@@ -15,7 +15,7 @@ public class FileLogger {
         Logger logger = Logger.getLogger(clazz.getName());
         if (handler == null) {
             try {
-                handler = new FileHandler("/tmp/" + groupPrefix + ".log", true);
+                handler = new FileHandler("/tmp/" + GROUP_PREFIX + ".log", true);
                 VerySimpleFormatter sf = new VerySimpleFormatter();
                 handler.setFormatter(sf);
             } catch (IOException e) {

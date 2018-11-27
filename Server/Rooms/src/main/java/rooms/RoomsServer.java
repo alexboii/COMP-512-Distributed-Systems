@@ -3,8 +3,8 @@ package rooms;
 import Constants.ServerConstants;
 import LockManager.DeadlockException;
 import RM.ResourceManager;
-import Tcp.IServer;
-import Tcp.SocketUtils;
+import TCP.IServer;
+import TCP.SocketUtils;
 import Utilities.FileLogger;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 
 import static Constants.GeneralConstants.*;
-import static Tcp.SocketUtils.sendReply;
+import static TCP.SocketUtils.sendReply;
 
 /**
  * Created by alex on 10/2/18.
@@ -155,6 +155,31 @@ public class RoomsServer extends ResourceManager implements IServer {
             case SHUTDOWN:
                 logger.info("Shutting down");
                 System.exit(0);
+                break;
+
+            case VOTE_REQUEST:
+                xid = request.getInt(XID);
+                result = voteReply(xid);
+                sendReply(writer, result, deadlock);
+
+                if (!result) {
+                    abort(xid);
+                }
+
+                break;
+
+            case DECISION:
+                xid = request.getInt(XID);
+                boolean type = request.getBoolean(DECISION_FIELD);
+
+                if(type) {
+                    result = commit(xid);
+                } else {
+                    result = abort(xid);
+                }
+
+                sendReply(writer, result, deadlock);
+
                 break;
         }
     }
