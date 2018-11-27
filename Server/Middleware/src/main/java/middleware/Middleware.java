@@ -67,7 +67,7 @@ public class Middleware extends ResourceManager implements IServer {
                         e.printStackTrace();
                     }
                     break;
-                case COMMMITTED:
+                case COMMITTED:
                     sendDecision(key, true);
                     break;
                 default:
@@ -296,7 +296,7 @@ public class Middleware extends ResourceManager implements IServer {
 
     private void sendDecision(int xid, boolean decision) {
         Set<String> rms = xIDManager.activeTransactions.get(xid).getParticipants();
-        xIDManager.activeTransactions.get(xid).setStatus((decision) ? STATUS.COMMMITTED : STATUS.ABORTED);
+        xIDManager.activeTransactions.get(xid).setStatus((decision) ? STATUS.COMMITTED : STATUS.ABORTED);
         logger.info("Sending vote request to " + rms);
 
         for (String rm : rms) {
@@ -630,13 +630,15 @@ public class Middleware extends ResourceManager implements IServer {
 
             Timer timer = new Timer();
 
-            logger.info("created new timer");
+            logger.info("Created new timer for xid=" + id);
 
             timer.schedule(new TimerTask() {
                 @Override
                 public void run() {
                     if (xIDManager.getActiveTransactions().containsKey(id)) {
                         try {
+                            logger.info("Timer expiring for xid=" + id);
+
                             abortAll(id);
                         } catch (JSONException e) {
                             e.printStackTrace();

@@ -7,6 +7,10 @@ import java.io.Serializable;
  */
 public class TransactionConstants {
     public enum STATUS implements Serializable {
-        ACTIVE, COMMMITTED, PREPARED, UNCERTAIN, ABORTED
+        ACTIVE, COMMITTED, PREPARED, UNCERTAIN, ABORTED
+    }
+
+    public enum FILE_PTR implements Serializable {
+        A, B, PTR
     }
 }

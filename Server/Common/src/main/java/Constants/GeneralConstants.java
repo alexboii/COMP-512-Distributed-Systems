@@ -4,7 +4,7 @@ package Constants;
  * Created by alex on 9/25/18.
  */
 public class GeneralConstants {
-    public static final String groupPrefix = "group01";
+    public static final String GROUP_PREFIX = "group01";
 
     public static final String CHAR_SET = "UTF-8";
 

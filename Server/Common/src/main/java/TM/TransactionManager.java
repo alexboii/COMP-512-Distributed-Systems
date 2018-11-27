@@ -5,6 +5,7 @@ import LockManager.LockManager;
 import Model.RMHashMap;
 import Model.ResourceItem;
 import Persistence.PersistedFile;
+import Persistence.ShadowFile;
 import Utilities.FileLogger;
 import LockManager.*;
 
@@ -25,7 +26,7 @@ public class TransactionManager {
     private Map<Integer, TransactionStatus> transactionStatus;
     private PersistedFile<Map<Integer, TransactionStatus>> persistedTransactionStatus;
     private RMHashMap mData;
-    private PersistedFile<RMHashMap> persistedCommittedData;
+    private ShadowFile persistedCommittedData;
     private String rmName;
 
     private static final Logger logger = FileLogger.getLogger(TransactionManager.class);
@@ -37,7 +38,7 @@ public class TransactionManager {
         this.rmName = rmName;
 
         this.persistedTransactionStatus = new PersistedFile<>(rmName, SNAPSHOT_FLAG);
-        this.persistedCommittedData = new PersistedFile<>(rmName, COMMITTED_FLAG);
+        this.persistedCommittedData = new ShadowFile(rmName);
 
         this.loadData();
     }
@@ -47,7 +48,7 @@ public class TransactionManager {
             logger.info("Loading data for " + this.rmName);
             this.transactionStatus = this.persistedTransactionStatus.read();
 
-            this.mData = this.persistedCommittedData.read();
+            this.mData = this.persistedCommittedData.restore();
         } catch (IOException | ClassNotFoundException e) {
             logger.info("Unable to load data for " + this.rmName);
             e.printStackTrace();
@@ -180,24 +181,23 @@ public class TransactionManager {
     }
 
     public boolean persistData() {
-        try {
-            this.persistedCommittedData.save(mData);
+        if (this.persistedCommittedData.writeCommit(mData)) {
             logger.info("Successfully saved committed data for " + rmName);
-        } catch (IOException e) {
-            e.printStackTrace();
-            logger.info("Unable to write committed data to disk for " + rmName);
-            return false;
+
+            return true;
         }
 
-        return true;
+        logger.info("Failed to save committed data for " + rmName);
+        return false;
     }
 
     public boolean commit(int xid) {
 
         logger.info("Committing xid: " + xid);
-        transactionStatus.get(xid).setStatus(STATUS.COMMMITTED);
 
         if (transactionStatus.get(xid) != null) {
+            transactionStatus.get(xid).setStatus(STATUS.COMMITTED);
+
             transactionStatus.get(xid).getWriteSet().forEach((key, value) -> commitData(key, value));
             transactionStatus.get(xid).getDeleteSet().forEach(key -> removeDataAndCommit(key));
 

@@ -22,7 +22,7 @@ public class PersistedFile<T> implements Serializable {
                 + GeneralConstants.TEMP_FOLDER
                 + File.separator + name + "_"
                 + type + "_"
-                + GeneralConstants.groupPrefix
+                + GeneralConstants.GROUP_PREFIX
                 + GeneralConstants.DATA_EXTENSION;
         this.file = new File(path);
     }
@@ -51,5 +51,9 @@ public class PersistedFile<T> implements Serializable {
         ois.close();
 
         return obj;
+    }
+
+    public boolean exists() {
+        return file.exists();
     }
 }
