@@ -168,7 +168,9 @@ public class TransactionManager {
 
     public boolean persistSnapshot() {
         try {
-            this.persistedTransactionStatus.save(transactionStatus);
+            synchronized (transactionStatus) {
+                this.persistedTransactionStatus.save(transactionStatus);
+            }
             logger.info("Successfully saved snapshot for " + rmName);
 
         } catch (IOException e) {
@@ -181,12 +183,14 @@ public class TransactionManager {
     }
 
     public boolean persistData() {
-        if (this.persistedCommittedData.writeCommit(mData)) {
-            logger.info("Successfully saved committed data for " + rmName);
+        synchronized (mData) {
+            if (this.persistedCommittedData.writeCommit(mData)) {
+                logger.info("Successfully saved committed data for " + rmName);
 
-            return true;
+                return true;
+            }
+
         }
-
         logger.info("Failed to save committed data for " + rmName);
         return false;
     }

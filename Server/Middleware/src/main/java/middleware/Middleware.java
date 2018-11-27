@@ -247,6 +247,7 @@ public class Middleware extends ResourceManager implements IServer {
                         sendReply(writer, boolRes);
 
                         break;
+                    case GET_DECISION:
                 }
                 break;
 
@@ -277,13 +278,29 @@ public class Middleware extends ResourceManager implements IServer {
                 JSONObject request = getVoteRequest(xid);
                 JSONObject result = sendAndReceiveAgnostic(host, Integer.parseInt(hostPort[1]), request, true);
 
-                if (result == null || !result.getBoolean(RESULT)) {
+                // retry once to wait for vote
+                // transaction becomes blocked
+                if (result == null) {
                     logger.info("Returned false from voteRequest because of bad request");
+                    logger.info("Retrying to acquire vote");
 
-                    throw new JSONException("Invalid");
+                    Thread.sleep(40000);
+
+                    result = sendAndReceiveAgnostic(host, Integer.parseInt(hostPort[1]), request, true);
+
+                    // if second time is still bad, then
+                    if (result == null) {
+                        logger.info("Failed to acquire vote from second attempt");
+                        throw new JSONException("Invalid");
+                    }
                 }
 
-            } catch (JSONException | DeadlockException e) {
+                // if one is false, we abort everything
+                if (!result.getBoolean(RESULT)) {
+                    return false;
+                }
+
+            } catch (JSONException | InterruptedException | DeadlockException e) {
                 logger.info("Returned false from voteRequest");
                 e.printStackTrace();
                 return false;
@@ -305,13 +322,10 @@ public class Middleware extends ResourceManager implements IServer {
 
             try {
                 JSONObject request = getDecisionRequest(xid, decision);
-                JSONObject result = sendAndReceiveAgnostic(host, Integer.parseInt(hostPort[1]), request, true);
+                sendRequest(host, Integer.parseInt(hostPort[1]), request);
 
-                if (result == null || !result.getBoolean(RESULT)) {
-                    throw new JSONException("Invalid");
-                }
 
-            } catch (JSONException | DeadlockException e) {
+            } catch (JSONException e) {
                 logger.info("Returned false from sendDecision");
                 e.printStackTrace();
             }
@@ -324,8 +338,10 @@ public class Middleware extends ResourceManager implements IServer {
             timers.remove(xid);
         }
 
-        xIDManager.completeTransaction(xid);
+        // xIDManager.completeTransaction(xid);
     }
+
+
 
 
     private boolean commitAll(JSONObject commitRequest) throws JSONException {
