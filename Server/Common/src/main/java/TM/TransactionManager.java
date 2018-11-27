@@ -1,21 +1,32 @@
 package TM;
 
+import Constants.ServerConstants;
 import Constants.TransactionConstants.STATUS;
 import LockManager.LockManager;
 import Model.RMHashMap;
 import Model.ResourceItem;
 import Persistence.PersistedFile;
 import Persistence.ShadowFile;
+import TCP.RequestFactory;
+import TCP.SocketUtils;
 import Utilities.FileLogger;
 import LockManager.*;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-import static Constants.GeneralConstants.COMMITTED_FLAG;
-import static Constants.GeneralConstants.SNAPSHOT_FLAG;
+import static Constants.GeneralConstants.*;
+import static TCP.SocketUtils.sendAndReceive;
+import static TCP.SocketUtils.sendRequest;
 
 /**
  * Implements 2 Phase Locking
@@ -48,11 +59,66 @@ public class TransactionManager {
             logger.info("Loading data for " + this.rmName);
             this.transactionStatus = this.persistedTransactionStatus.read();
 
+            this.transactionStatus.keySet().forEach(key -> {
+                switch (this.transactionStatus.get(key).getStatus()) {
+                    case ABORTED:
+                    case COMMITTED:
+                        sendDecisionFinalizedSignal(key);
+                        break;
+                    case UNCERTAIN:
+                        JSONObject result = null;
+
+                        // attempt to connect to middleware while this is null
+                        while (result == null) {
+                            result = getDecision(key);
+                        }
+
+                        try {
+                            if (result.getBoolean(RESULT)) {
+                                commit(key);
+                            } else {
+                                abort(key);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        break;
+                    case PREPARED:
+                        abort(key);
+                        break;
+                    default:
+                        break;
+                }
+            });
+
+
             this.mData = this.persistedCommittedData.restore();
         } catch (IOException | ClassNotFoundException e) {
             logger.info("Unable to load data for " + this.rmName);
             e.printStackTrace();
         }
+    }
+
+    public JSONObject getDecision(int xid) {
+        JSONObject result = null;
+
+        try {
+            Socket server = new Socket(InetAddress.getByName(ServerConstants.MIDDLEWARE_SERVER_ADDRESS), ServerConstants.MIDDLEWARE_PORT);
+
+            OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(server.getInputStream(), CHAR_SET));
+
+            result = SocketUtils.sendAndReceive(RequestFactory.getGetDecisionRequest(xid), writer, reader);
+
+            server.close();
+            writer.close();
+            reader.close();
+        } catch (IOException | JSONException e) {
+            e.printStackTrace();
+        }
+
+        return result;
     }
 
     /**
@@ -210,7 +276,11 @@ public class TransactionManager {
         }
 
 
-        return this.persistData();
+        Boolean res = this.persistData();
+
+        sendDecisionFinalizedSignal(xid);
+
+        return res;
     }
 
     public boolean abort(int xid) {
@@ -218,7 +288,22 @@ public class TransactionManager {
         transactionStatus.get(xid).setStatus(STATUS.ABORTED);
 
         clear(xid);
-        return this.persistSnapshot();
+
+        Boolean res = this.persistSnapshot();
+
+        sendDecisionFinalizedSignal(xid);
+
+        return res;
+    }
+
+    private void sendDecisionFinalizedSignal(int xid) {
+        try {
+            JSONObject req = RequestFactory.getHaveCommittedRequest(xid, getAddress());
+            sendRequest(ServerConstants.MIDDLEWARE_SERVER_ADDRESS, ServerConstants.MIDDLEWARE_PORT, req);
+            logger.info("Sent finalized decision signal for xid: " + xid);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     private void clear(int xid) {
@@ -231,6 +316,19 @@ public class TransactionManager {
             logger.info("Releasing all locks held by transaction: " + xid);
 
             lockManager.UnlockAll(xid);
+        }
+    }
+
+    private String getAddress() {
+        switch (rmName) {
+            case "Flights":
+                return ServerConstants.FLIGHTS_SERVER_ADDRESS + ":" + ServerConstants.FLIGHTS_SERVER_PORT;
+            case "Cars":
+                return ServerConstants.CAR_SERVER_ADDRESS + ":" + ServerConstants.CAR_SERVER_PORT;
+            case "Rooms":
+                return ServerConstants.ROOMS_SERVER_ADDRESS + ":" + ServerConstants.ROOMS_SERVER_PORT;
+            default:
+                return null;
         }
     }
 

@@ -15,9 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
-import static Constants.GeneralConstants.ABORTED;
-import static Constants.GeneralConstants.DEADLOCK;
-import static Constants.GeneralConstants.RESULT;
+import static Constants.GeneralConstants.*;
 
 public class SocketUtils {
 
@@ -53,6 +51,14 @@ public class SocketUtils {
         return;
     }
 
+    public static void sendReply(OutputStreamWriter writer, JSONObject reply) throws IOException, JSONException {
+        logger.info("Sending back reply: " + reply);
+        writer.write(reply.toString() + "\n");
+        writer.flush();
+        return;
+    }
+
+
     public static <I> void sendReply(OutputStreamWriter writer, I result, boolean deadlock) throws IOException, JSONException {
         JSONObject reply = new JSONObject();
         reply.put(RESULT, result);
@@ -85,6 +91,23 @@ public class SocketUtils {
         writer.write(reply.toString() + "\n");
         writer.flush();
         return;
+    }
+
+    public static void sendRequest(String serverAddress, int port, JSONObject request) {
+
+        try {
+            logger.info("Sending request " + request + " to server: " + serverAddress + ":" + port);
+            Socket server = new Socket(InetAddress.getByName(serverAddress), port);
+            OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
+
+            SocketUtils.send(request, writer);
+
+            server.close();
+            writer.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 

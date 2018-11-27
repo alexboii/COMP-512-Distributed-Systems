@@ -52,9 +52,17 @@ public class XIDManager {
         if (request.get(TYPE).equals(OTHERS) && request.get(ACTION).equals(SHUTDOWN)) {
             return true;
         }
+
         if (activeTransactions.containsKey(request.getInt(XID))) {
+
+            if (!request.get(TYPE).equals(TRANSACTION) && !request.get(TYPE).equals(OTHERS) && activeTransactions.get(request.getInt(XID)).getStatus() != STATUS.ACTIVE) {
+                return false;
+            }
+
             return true;
         }
+
+
         logger.severe("validation failed");
         return false;
     }
@@ -64,6 +72,7 @@ public class XIDManager {
         Set rms = activeTransactions.remove(xid).getParticipants();
         logger.info("RMs involved " + rms);
         persistData();
+
         return rms;
     }
 

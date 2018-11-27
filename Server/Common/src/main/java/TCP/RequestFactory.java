@@ -306,5 +306,27 @@ public class RequestFactory {
 
         return request;
     }
+
+    public static JSONObject getGetDecisionRequest(int xid) throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, TRANSACTION);
+        request.put(ACTION, GET_DECISION);
+        request.put(XID, xid);
+
+        return request;
+    }
+
+    public static JSONObject getHaveCommittedRequest(int xid, String rmAddress) throws JSONException {
+        JSONObject request = new JSONObject();
+
+        request.put(TYPE, TRANSACTION);
+        request.put(ACTION, HAVE_COMMITTED);
+        request.put(RM_ADDRESS, rmAddress);
+        request.put(XID, xid);
+
+        return request;
+    }
+
 }
 

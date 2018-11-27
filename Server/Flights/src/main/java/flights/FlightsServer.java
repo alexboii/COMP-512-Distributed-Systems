@@ -171,12 +171,10 @@ public class FlightsServer extends ResourceManager implements IServer {
                 boolean type = request.getBoolean(DECISION_FIELD);
 
                 if (type) {
-                    result = commit(xid);
+                    commit(xid);
                 } else {
-                    result = abort(xid);
+                    abort(xid);
                 }
-
-                sendReply(writer, result, deadlock);
 
                 break;
 

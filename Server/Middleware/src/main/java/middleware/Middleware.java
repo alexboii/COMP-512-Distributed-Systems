@@ -30,6 +30,7 @@ import static TCP.RequestFactory.getDecisionRequest;
 import static TCP.RequestFactory.getVoteRequest;
 import static TCP.SocketUtils.sendReply;
 import static TCP.SocketUtils.sendReplyToClient;
+import static TCP.SocketUtils.sendRequest;
 
 public class Middleware extends ResourceManager implements IServer {
     private static final String serverName = "Middleware";
@@ -248,6 +249,17 @@ public class Middleware extends ResourceManager implements IServer {
 
                         break;
                     case GET_DECISION:
+                        xid = request.getInt(XID);
+                        boolRes = getDecision(xid);
+                        sendReply(writer, boolRes);
+                        break;
+
+                    case HAVE_COMMITTED:
+                        xid = request.getInt(XID);
+                        String rm = request.getString(RM_ADDRESS);
+
+                        processHaveCommitted(xid, rm);
+                        break;
                 }
                 break;
 
@@ -341,9 +353,6 @@ public class Middleware extends ResourceManager implements IServer {
         // xIDManager.completeTransaction(xid);
     }
 
-
-
-
     private boolean commitAll(JSONObject commitRequest) throws JSONException {
         int xid = commitRequest.getInt(XID);
         boolean decision = voteRequest(xid);
@@ -370,6 +379,25 @@ public class Middleware extends ResourceManager implements IServer {
         });
     }
 
+    private boolean getDecision(int xid) {
+        boolean reply = false;
+        if (xIDManager.getActiveTransactions().get(xid) != null) {
+            reply = xIDManager.getActiveTransactions().get(xid).getStatus() == STATUS.COMMITTED;
+        }
+
+        return reply;
+    }
+
+    private void processHaveCommitted(int xid, String rmAddress) {
+        if (xIDManager.getActiveTransactions().get(xid) != null) {
+            xIDManager.getActiveTransactions().get(xid).getParticipants().remove(rmAddress);
+
+            if (xIDManager.getActiveTransactions().get(xid).getParticipants().size() == 0) {
+                xIDManager.completeTransaction(xid);
+            }
+        }
+    }
+
     /**
      * Routing happens here
      *
@@ -378,6 +406,7 @@ public class Middleware extends ResourceManager implements IServer {
      * @param request
      * @return
      */
+
     private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request, Boolean... isTransactionOperation) throws JSONException, DeadlockException {
         JSONObject result = null;
         int xid = request.getInt(XID);
@@ -409,22 +438,7 @@ public class Middleware extends ResourceManager implements IServer {
         return result;
     }
 
-    private void sendRequest(String serverAddress, int port, JSONObject request) {
 
-        try {
-            logger.info("Sending request " + request + " to server: " + serverAddress + ":" + port);
-            Socket server = new Socket(InetAddress.getByName(serverAddress), port);
-            OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
-
-            SocketUtils.send(request, writer);
-
-            server.close();
-            writer.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     public int newCustomer(JSONObject request) throws JSONException, DeadlockException {
         int xid = request.getInt(XID);
