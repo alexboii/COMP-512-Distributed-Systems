@@ -52,18 +52,21 @@ public class XIDManager {
         if (request.get(TYPE).equals(OTHERS) && request.get(ACTION).equals(SHUTDOWN)) {
             return true;
         }
+        if (request.get(TYPE).equals(CRASH)) {
+            return true;
+        }
 
         if (activeTransactions.containsKey(request.getInt(XID))) {
 
             if (!request.get(TYPE).equals(TRANSACTION) && !request.get(TYPE).equals(OTHERS) && activeTransactions.get(request.getInt(XID)).getStatus() != STATUS.ACTIVE) {
+                logger.severe("XID validation failed");
                 return false;
             }
 
             return true;
         }
 
-
-        logger.severe("validation failed");
+        logger.severe("XID validation failed");
         return false;
     }
 

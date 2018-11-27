@@ -295,12 +295,14 @@ public class Middleware extends ResourceManager implements IServer {
                 switch ((String) request.get(ACTION)) {
                     case CRASH_MIDDLEWARE:
                         int mode = request.getInt(CRASH_MODE);
+                        logger.info("Enable middleware crash mode=" + mode);
                         middlewareCrashMode.set(mode);
                         break;
 
                     case CRASH_RESOURCE_MANAGER:
                         String rm = request.getString(RESOURCE_MANAGER_NAME);
                         mode = request.getInt(CRASH_MODE);
+                        logger.info("Enable resource manager crash mode=" + mode);
                         sendRequest(nameToHost(rm), nameToPort(rm), request);
                         break;
 

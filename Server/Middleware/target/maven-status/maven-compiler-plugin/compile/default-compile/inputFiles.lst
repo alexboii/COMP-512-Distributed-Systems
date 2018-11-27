@@ -1,4 +1,4 @@
-/home/alex/Projects/COMP-512-Distributed-Systems/Server/Middleware/src/main/java/customer/CustomerResourceManager.java
-/home/alex/Projects/COMP-512-Distributed-Systems/Server/Middleware/src/main/java/transaction/ActiveTransaction.java
-/home/alex/Projects/COMP-512-Distributed-Systems/Server/Middleware/src/main/java/middleware/Middleware.java
-/home/alex/Projects/COMP-512-Distributed-Systems/Server/Middleware/src/main/java/transaction/XIDManager.java
+/Users/hasnainmamdani/Academics/McGill/S-I/COMP512_DistributedSystems/project/COMP-512-Distributed-Systems/Server/Middleware/src/main/java/transaction/XIDManager.java
+/Users/hasnainmamdani/Academics/McGill/S-I/COMP512_DistributedSystems/project/COMP-512-Distributed-Systems/Server/Middleware/src/main/java/customer/CustomerResourceManager.java
+/Users/hasnainmamdani/Academics/McGill/S-I/COMP512_DistributedSystems/project/COMP-512-Distributed-Systems/Server/Middleware/src/main/java/middleware/Middleware.java
+/Users/hasnainmamdani/Academics/McGill/S-I/COMP512_DistributedSystems/project/COMP-512-Distributed-Systems/Server/Middleware/src/main/java/transaction/ActiveTransaction.java
