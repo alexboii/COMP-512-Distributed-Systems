@@ -90,6 +90,8 @@ public class Middleware implements IServer {
 
     private void loadData() {
         xIDManager.getActiveTransactions().keySet().forEach(key -> {
+            logger.info("Restoring XID=" + key + " with status " + xIDManager.getActiveTransactions().get(key).getStatus().toString());
+
             switch (xIDManager.getActiveTransactions().get(key).getStatus()) {
                 case ACTIVE:
                     resetTimeout(key);
@@ -332,9 +334,10 @@ public class Middleware implements IServer {
     private boolean voteRequest(int xid) {
         Set<String> rms = xIDManager.activeTransactions.get(xid).getParticipants();
         xIDManager.activeTransactions.get(xid).setStatus(STATUS.PREPARED);
+        xIDManager.persistData();
         logger.info("Sending vote request to " + rms);
 
-        if (middlewareCrashMode.get() == 1){
+        if (middlewareCrashMode.get() == 1) {
             //Crash before sending vote request
             logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
             System.exit(1);
@@ -410,8 +413,9 @@ public class Middleware implements IServer {
     private void sendDecision(int xid, boolean decision) {
         Set<String> rms = xIDManager.activeTransactions.get(xid).getParticipants();
         xIDManager.activeTransactions.get(xid).setStatus((decision) ? STATUS.COMMITTED : STATUS.ABORTED);
+        xIDManager.persistData();
 
-        if (middlewareCrashMode.get() == 5){
+        if (middlewareCrashMode.get() == 5) {
             //Crash after deciding but before sending decision
             logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
             System.exit(1);
@@ -433,7 +437,7 @@ public class Middleware implements IServer {
                 e.printStackTrace();
             }
 
-            if (middlewareCrashMode.get() == 6){
+            if (middlewareCrashMode.get() == 6) {
                 //Crash after sending some but not all decisions
                 logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
                 System.exit(1);
@@ -447,7 +451,7 @@ public class Middleware implements IServer {
             timers.remove(xid);
         }
 
-        if (middlewareCrashMode.get() == 7){
+        if (middlewareCrashMode.get() == 7) {
             //Crash after having sent all decisions
             logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
             System.exit(1);
@@ -540,7 +544,6 @@ public class Middleware implements IServer {
 
         return result;
     }
-
 
 
     public int newCustomer(JSONObject request) throws JSONException, DeadlockException {
