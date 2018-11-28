@@ -81,6 +81,7 @@ public class Middleware implements IServer {
             try {
                 if(crashDuringRecoveryStatus.read()) {
                     middlewareCrashMode.set(8);
+                    crashDuringRecoveryStatus.save(false); //so that it doesn't crash again at the next restart
                 }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();

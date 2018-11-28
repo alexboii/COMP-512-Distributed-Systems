@@ -44,6 +44,7 @@ abstract public class ResourceManager implements IResourceManager {
             try {
                 if(crashDuringRecoveryStatus.read()) {
                     rMCrashMode.set(5);
+                    crashDuringRecoveryStatus.save(false); //so that it doesn't crash again at the next restart
                 }
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
