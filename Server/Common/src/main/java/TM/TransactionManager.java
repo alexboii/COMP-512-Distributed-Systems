@@ -56,63 +56,65 @@ public class TransactionManager {
 
     private void loadData(AtomicInteger rMCrashMode) {
 
-            logger.info("Loading data for " + this.rmName);
+        logger.info("Loading data for " + this.rmName);
 
-            try{
-                if(this.persistedTransactionStatus.exists()){
-                    this.transactionStatus = this.persistedTransactionStatus.read();
+        try {
+            if (this.persistedTransactionStatus.exists()) {
+                this.transactionStatus = this.persistedTransactionStatus.read();
 
-                    this.transactionStatus.keySet().forEach(key -> {
-                        switch (this.transactionStatus.get(key).getStatus()) {
-                            case ABORTED:
-                            case COMMITTED:
-                                sendDecisionFinalizedSignal(key);
-                                break;
-                            case UNCERTAIN:
-                                JSONObject result = null;
+                this.transactionStatus.keySet().forEach(key -> {
+                    switch (this.transactionStatus.get(key).getStatus()) {
+                        case ABORTED:
+                        case COMMITTED:
+                            sendDecisionFinalizedSignal(key);
+                            break;
+                        case UNCERTAIN:
+                            JSONObject result = null;
 
-                                // attempt to connect to middleware while this is null
-                                while (result == null) {
-                                    result = getDecision(key);
+                            // attempt to connect to middleware while this is null
+                            while (result == null) {
+                                result = getDecision(key);
+                            }
+
+                            try {
+                                if (result.getBoolean(RESULT)) {
+                                    commit(key);
+                                } else {
+                                    abort(key);
                                 }
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
 
-                                try {
-                                    if (result.getBoolean(RESULT)) {
-                                        commit(key);
-                                    } else {
-                                        abort(key);
-                                    }
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-
-                                break;
-                            case PREPARED:
-                                abort(key);
-                                break;
-                            default:
-                                break;
-                        }
-                        if (rMCrashMode.get() == 5){
-                            //Crash during recovery
-                            logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
-                            System.exit(1);
-                        }
-                    });
-                }
-            } catch (IOException | ClassNotFoundException e) {
-                logger.info("Unable to load data for " + this.rmName);
-                e.printStackTrace();
+                            break;
+                        case PREPARED:
+                            abort(key);
+                            break;
+                        default:
+                            break;
+                    }
+                    if (rMCrashMode.get() == 5) {
+                        //Crash during recovery
+                        logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
+                        System.exit(1);
+                    }
+                });
             }
+        } catch (IOException | ClassNotFoundException e) {
+            logger.info("Unable to load data for " + this.rmName);
+            e.printStackTrace();
+        }
 
-            //still crash during recovery if there were no transaction statuses
-            if (rMCrashMode.get() == 5){
-                //Crash during recovery
-                logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
-                System.exit( 1);
-            }
+        //still crash during recovery if there were no transaction statuses
+        if (rMCrashMode.get() == 5) {
+            //Crash during recovery
+            logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
+            System.exit(1);
+        }
 
-            this.mData = this.persistedCommittedData.restore();
+        RMHashMap hm = this.persistedCommittedData.restore();
+
+        this.mData = hm == null ? new RMHashMap() : hm;
 
     }
 

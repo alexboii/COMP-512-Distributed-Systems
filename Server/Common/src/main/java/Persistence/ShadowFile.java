@@ -32,6 +32,8 @@ public class ShadowFile {
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
+        } else {
+            this.filePtr = FILE_PTR.A;
         }
     }
 

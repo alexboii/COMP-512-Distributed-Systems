@@ -31,6 +31,8 @@ public abstract class Client {
 
     public abstract void connectServer();
 
+    public abstract void destroyConnection() throws IOException;
+
     public void start() {
         // Prepare for reading commands
         System.out.println();
@@ -70,6 +72,8 @@ public abstract class Client {
 
     public boolean execute(Command cmd, Vector<String> arguments) throws NumberFormatException, JSONException, TransactionAbortException, InvalidTransactionException {
         boolean success = false;
+
+        this.connectServer();
 
         switch (cmd) {
             case Help: {
@@ -361,7 +365,7 @@ public abstract class Client {
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
                 validate(result);
-                if(result.has(RESULT)){
+                if (result.has(RESULT)) {
                     System.out.print("Bill: " + result.getString(RESULT));
                 }
                 success = true;
@@ -577,7 +581,7 @@ public abstract class Client {
             case CrashMiddleware: {
                 checkArgumentsCount(2, arguments.size());
                 int mode = toInt(arguments.elementAt(1));
-                if (mode >= 1 && mode <= 8){
+                if (mode >= 1 && mode <= 8) {
                     System.out.println("Enable middleware crash. Mode=" + mode);
                     JSONObject request = RequestFactory.getCrashMiddlewareRequest(mode);
                     SocketUtils.send(request, middlewareWriter);
@@ -591,7 +595,7 @@ public abstract class Client {
                 checkArgumentsCount(3, arguments.size());
                 String rm = arguments.elementAt(1);
                 int mode = toInt(arguments.elementAt(2));
-                if (mode >= 1 && mode <= 5){
+                if (mode >= 1 && mode <= 5) {
                     System.out.println("Enable resource manager crash. RM name=" + rm + " mode=" + mode);
                     JSONObject request = RequestFactory.getCrashResourceManagerRequest(rm, mode);
                     SocketUtils.send(request, middlewareWriter);
@@ -610,15 +614,22 @@ public abstract class Client {
             }
 
         }
+
+        try {
+            this.destroyConnection();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         return success;
     }
 
     private void validate(JSONObject result) throws JSONException, TransactionAbortException, InvalidTransactionException {
-        if(result.has(VALID_XID) && !result.getBoolean(VALID_XID)) {
+        if (result.has(VALID_XID) && !result.getBoolean(VALID_XID)) {
             throw new InvalidTransactionException("No active transactions with the given XID");
         }
 
-        if(result.has(ABORTED) && result.getBoolean(ABORTED)) {
+        if (result.has(ABORTED) && result.getBoolean(ABORTED)) {
             throw new TransactionAbortException("Transaction aborted. See server logs.");
         }
     }
