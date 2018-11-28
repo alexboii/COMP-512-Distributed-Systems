@@ -43,15 +43,15 @@ public class Middleware extends ResourceManager implements IServer {
     public Map<Integer, Timer> timers;
 
     /**
-     0. No crash
-     1. Crash before sending vote request
-     2. Crash after sending vote request and before receiving any replies
-     3. Crash after receiving some replies but not all
-     4. Crash after receiving all replies but before deciding
-     5. Crash after deciding but before sending decision
-     6. Crash after sending some but not all decisions
-     7. Crash after having sent all decisions
-     8. Recovery of the coordinator
+     * 0. No crash
+     * 1. Crash before sending vote request
+     * 2. Crash after sending vote request and before receiving any replies
+     * 3. Crash after receiving some replies but not all
+     * 4. Crash after receiving all replies but before deciding
+     * 5. Crash after deciding but before sending decision
+     * 6. Crash after sending some but not all decisions
+     * 7. Crash after having sent all decisions
+     * 8. Recovery of the coordinator
      */
     private AtomicInteger middlewareCrashMode = new AtomicInteger(0);
 
@@ -72,6 +72,8 @@ public class Middleware extends ResourceManager implements IServer {
 
     private void loadData() {
         xIDManager.getActiveTransactions().keySet().forEach(key -> {
+            logger.info("Restoring XID=" + key + " with status " + xIDManager.getActiveTransactions().get(key).getStatus().toString());
+
             switch (xIDManager.getActiveTransactions().get(key).getStatus()) {
                 case ACTIVE:
                     resetTimeout(key);
@@ -321,9 +323,10 @@ public class Middleware extends ResourceManager implements IServer {
     private boolean voteRequest(int xid) {
         Set<String> rms = xIDManager.activeTransactions.get(xid).getParticipants();
         xIDManager.activeTransactions.get(xid).setStatus(STATUS.PREPARED);
+        xIDManager.persistData();
         logger.info("Sending vote request to " + rms);
 
-        if (middlewareCrashMode.get() == 1){
+        if (middlewareCrashMode.get() == 1) {
             //Crash before sending vote request
             logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
             System.exit(1);
@@ -367,7 +370,7 @@ public class Middleware extends ResourceManager implements IServer {
         }
 
         logger.info("Successfully completed voteRequest");
-        if (middlewareCrashMode.get() == 4){
+        if (middlewareCrashMode.get() == 4) {
             //Crash after receiving all replies but before deciding
             logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
             System.exit(1);
@@ -378,8 +381,9 @@ public class Middleware extends ResourceManager implements IServer {
     private void sendDecision(int xid, boolean decision) {
         Set<String> rms = xIDManager.activeTransactions.get(xid).getParticipants();
         xIDManager.activeTransactions.get(xid).setStatus((decision) ? STATUS.COMMITTED : STATUS.ABORTED);
+        xIDManager.persistData();
 
-        if (middlewareCrashMode.get() == 5){
+        if (middlewareCrashMode.get() == 5) {
             //Crash after deciding but before sending decision
             logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
             System.exit(1);
@@ -401,7 +405,7 @@ public class Middleware extends ResourceManager implements IServer {
                 e.printStackTrace();
             }
 
-            if (middlewareCrashMode.get() == 6){
+            if (middlewareCrashMode.get() == 6) {
                 //Crash after sending some but not all decisions
                 logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
                 System.exit(1);
@@ -415,7 +419,7 @@ public class Middleware extends ResourceManager implements IServer {
             timers.remove(xid);
         }
 
-        if (middlewareCrashMode.get() == 7){
+        if (middlewareCrashMode.get() == 7) {
             //Crash after having sent all decisions
             logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
             System.exit(1);
@@ -508,7 +512,6 @@ public class Middleware extends ResourceManager implements IServer {
 
         return result;
     }
-
 
 
     public int newCustomer(JSONObject request) throws JSONException, DeadlockException {

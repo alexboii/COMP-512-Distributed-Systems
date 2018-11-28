@@ -273,27 +273,34 @@ public class TransactionManager {
 
             clear(xid);
             this.persistSnapshot();
+
+            Boolean res = this.persistData();
+
+            sendDecisionFinalizedSignal(xid);
+
+            return res;
         }
 
-
-        Boolean res = this.persistData();
-
-        sendDecisionFinalizedSignal(xid);
-
-        return res;
+        return true;
     }
 
     public boolean abort(int xid) {
         logger.info("Aborting xid: " + xid);
-        transactionStatus.get(xid).setStatus(STATUS.ABORTED);
 
-        clear(xid);
+        if (transactionStatus.get(xid) != null) {
+            transactionStatus.get(xid).setStatus(STATUS.ABORTED);
 
-        Boolean res = this.persistSnapshot();
+            clear(xid);
 
-        sendDecisionFinalizedSignal(xid);
+            Boolean res = this.persistSnapshot();
 
-        return res;
+            sendDecisionFinalizedSignal(xid);
+
+            return res;
+        }
+
+
+        return true;
     }
 
     private void sendDecisionFinalizedSignal(int xid) {
