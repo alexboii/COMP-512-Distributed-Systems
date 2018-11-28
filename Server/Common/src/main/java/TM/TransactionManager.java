@@ -55,60 +55,65 @@ public class TransactionManager {
     }
 
     private void loadData(AtomicInteger rMCrashMode) {
-        try {
+
             logger.info("Loading data for " + this.rmName);
-            this.transactionStatus = this.persistedTransactionStatus.read();
 
-            this.transactionStatus.keySet().forEach(key -> {
-                switch (this.transactionStatus.get(key).getStatus()) {
-                    case ABORTED:
-                    case COMMITTED:
-                        sendDecisionFinalizedSignal(key);
-                        break;
-                    case UNCERTAIN:
-                        JSONObject result = null;
+            try{
+                if(this.persistedTransactionStatus.exists()){
+                    this.transactionStatus = this.persistedTransactionStatus.read();
 
-                        // attempt to connect to middleware while this is null
-                        while (result == null) {
-                            result = getDecision(key);
-                        }
+                    this.transactionStatus.keySet().forEach(key -> {
+                        switch (this.transactionStatus.get(key).getStatus()) {
+                            case ABORTED:
+                            case COMMITTED:
+                                sendDecisionFinalizedSignal(key);
+                                break;
+                            case UNCERTAIN:
+                                JSONObject result = null;
 
-                        try {
-                            if (result.getBoolean(RESULT)) {
-                                commit(key);
-                            } else {
+                                // attempt to connect to middleware while this is null
+                                while (result == null) {
+                                    result = getDecision(key);
+                                }
+
+                                try {
+                                    if (result.getBoolean(RESULT)) {
+                                        commit(key);
+                                    } else {
+                                        abort(key);
+                                    }
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+
+                                break;
+                            case PREPARED:
                                 abort(key);
-                            }
-                        } catch (JSONException e) {
-                            e.printStackTrace();
+                                break;
+                            default:
+                                break;
                         }
-
-                        break;
-                    case PREPARED:
-                        abort(key);
-                        break;
-                    default:
-                        break;
+                        if (rMCrashMode.get() == 5){
+                            //Crash during recovery
+                            logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
+                            System.exit(1);
+                        }
+                    });
                 }
-                if (rMCrashMode.get() == 5){
-                    //Crash during recovery
-                    logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
-                    System.exit(1);
-                }
-            });
+            } catch (IOException | ClassNotFoundException e) {
+                logger.info("Unable to load data for " + this.rmName);
+                e.printStackTrace();
+            }
 
-            //still crash if there were no transaction statuses
+            //still crash during recovery if there were no transaction statuses
             if (rMCrashMode.get() == 5){
                 //Crash during recovery
                 logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
-                System.exit(1);
+                System.exit( 1);
             }
 
             this.mData = this.persistedCommittedData.restore();
-        } catch (IOException | ClassNotFoundException e) {
-            logger.info("Unable to load data for " + this.rmName);
-            e.printStackTrace();
-        }
+
     }
 
     public JSONObject getDecision(int xid) {
