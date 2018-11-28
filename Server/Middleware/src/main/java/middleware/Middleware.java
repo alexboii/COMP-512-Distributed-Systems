@@ -43,15 +43,15 @@ public class Middleware implements IServer {
     public Map<Integer, Timer> timers;
 
     /**
-     0. No crash
-     1. Crash before sending vote request
-     2. Crash after sending vote request and before receiving any replies
-     3. Crash after receiving some replies but not all
-     4. Crash after receiving all replies but before deciding
-     5. Crash after deciding but before sending decision
-     6. Crash after sending some but not all decisions
-     7. Crash after having sent all decisions
-     8. Crash during recovery of the coordinator
+     * 0. No crash
+     * 1. Crash before sending vote request
+     * 2. Crash after sending vote request and before receiving any replies
+     * 3. Crash after receiving some replies but not all
+     * 4. Crash after receiving all replies but before deciding
+     * 5. Crash after deciding but before sending decision
+     * 6. Crash after sending some but not all decisions
+     * 7. Crash after having sent all decisions
+     * 8. Crash during recovery of the coordinator
      */
     private AtomicInteger middlewareCrashMode;
 
