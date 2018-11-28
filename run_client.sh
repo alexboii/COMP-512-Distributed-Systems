@@ -10,6 +10,5 @@ COMMON_DIR="$ROOT_DIR/Server/Common/pom.xml"
 mvn -f $COMMON_DIR clean install
 
 mvn -f "$CLIENT_DIR" clean compile assembly:single
-cp java.policy "$JAR_DIR"
 
-java -Djava.security.policy=java.policy -jar $JAR_LOCATION
+java -jar $JAR_LOCATION
