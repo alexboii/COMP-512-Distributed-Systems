@@ -12,10 +12,10 @@ import java.net.Socket;
  */
 public class ProcessRequestRunnable implements Runnable {
     Socket client;
-    IResourceManager handler;
+    IServer handler;
 
 
-    public ProcessRequestRunnable(Socket client, IResourceManager handler){
+    public ProcessRequestRunnable(Socket client, IServer handler){
         this.client = client;
         this.handler = handler;
     }

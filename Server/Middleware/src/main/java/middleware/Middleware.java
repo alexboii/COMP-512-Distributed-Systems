@@ -3,7 +3,7 @@ package middleware;
 import Constants.ServerConstants;
 import Constants.TransactionConstants.STATUS;
 import LockManager.DeadlockException;
-import RM.ResourceManager;
+import Persistence.PersistedFile;
 import TCP.IServer;
 import TCP.RequestFactory;
 import TCP.SocketUtils;
@@ -35,7 +35,7 @@ import static TCP.SocketUtils.sendRequest;
 import static Utilities.RMNameServerUtil.nameToHost;
 import static Utilities.RMNameServerUtil.nameToPort;
 
-public class Middleware extends ResourceManager implements IServer {
+public class Middleware implements IServer {
     private static final String serverName = "Middleware";
     private static final int maxConcurrentClients = 10;
     public CustomerResourceManager customerManager;
@@ -51,9 +51,11 @@ public class Middleware extends ResourceManager implements IServer {
      5. Crash after deciding but before sending decision
      6. Crash after sending some but not all decisions
      7. Crash after having sent all decisions
-     8. Recovery of the coordinator
+     8. Crash during recovery of the coordinator
      */
-    private AtomicInteger middlewareCrashMode = new AtomicInteger(0);
+    private AtomicInteger middlewareCrashMode;
+
+    private PersistedFile<Boolean> crashDuringRecoveryStatus;
 
     private static final Logger logger = FileLogger.getLogger(Middleware.class);
 
@@ -63,11 +65,27 @@ public class Middleware extends ResourceManager implements IServer {
     }
 
     public Middleware() {
-        super(serverName);
         customerManager = new CustomerResourceManager();
         xIDManager = new XIDManager();
         timers = new ConcurrentHashMap<>();
+        crashDuringRecoveryStatus = new PersistedFile<>(serverName, CRASH_AT_RECOVERY_FLAG);
+        initCrashMode();
         loadData();
+    }
+
+    private void initCrashMode(){
+        middlewareCrashMode = new AtomicInteger(0);
+
+        //set crash mode to 8 if we need middleware to crash during recovery
+        if (crashDuringRecoveryStatus.exists()) {
+            try {
+                if(crashDuringRecoveryStatus.read()) {
+                    middlewareCrashMode.set(8);
+                }
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void loadData() {
@@ -90,10 +108,21 @@ public class Middleware extends ResourceManager implements IServer {
                 default:
                     break;
             }
+            if (middlewareCrashMode.get() == 8){
+                //Crash during recovery of the coordinator
+                logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
+                System.exit(1);
+            }
         });
+
+        //still crash if there were no active transactions
+        if (middlewareCrashMode.get() == 8){
+            //Crash during recovery of the coordinator
+            logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
+            System.exit(1);
+        }
     }
 
-    @Override
     public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException {
 
         logger.info("Received request " + request);
@@ -240,32 +269,8 @@ public class Middleware extends ResourceManager implements IServer {
                         sendReply(writer, true);
                         break;
 
-                    case VOTE_REQUEST:
-                        int xid = request.getInt(XID);
-                        boolRes = voteReply(xid);
-                        sendReply(writer, boolRes);
-
-                        if (!boolRes) {
-                            abort(xid);
-                        }
-
-                        break;
-
-                    case DECISION:
-                        xid = request.getInt(XID);
-                        boolean type = request.getBoolean(DECISION_FIELD);
-
-                        if (type) {
-                            boolRes = commit(xid);
-                        } else {
-                            boolRes = abort(xid);
-                        }
-
-                        sendReply(writer, boolRes);
-
-                        break;
                     case GET_DECISION:
-                        xid = request.getInt(XID);
+                        int xid = request.getInt(XID);
                         boolRes = getDecision(xid);
                         sendReply(writer, boolRes);
                         break;
@@ -297,6 +302,11 @@ public class Middleware extends ResourceManager implements IServer {
                         int mode = request.getInt(CRASH_MODE);
                         logger.info("Enable middleware crash mode=" + mode);
                         middlewareCrashMode.set(mode);
+                        if(mode == 8){
+                            crashDuringRecoveryStatus.save(true);
+                        } else {
+                            crashDuringRecoveryStatus.save(false);
+                        }
                         break;
 
                     case CRASH_RESOURCE_MANAGER:
@@ -312,6 +322,7 @@ public class Middleware extends ResourceManager implements IServer {
                         sendRequest(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, request);
                         sendRequest(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, request);
                         middlewareCrashMode.set(0);
+                        crashDuringRecoveryStatus.save(false);
                         break;
                 }
                 break;
@@ -329,6 +340,8 @@ public class Middleware extends ResourceManager implements IServer {
             System.exit(1);
         }
 
+        int replies = 0;
+
         for (String rm : rms) {
             String[] hostPort = rm.split(":");
             String host = hostPort[0];
@@ -336,6 +349,22 @@ public class Middleware extends ResourceManager implements IServer {
             try {
                 JSONObject request = getVoteRequest(xid);
                 JSONObject result = sendAndReceiveAgnostic(host, Integer.parseInt(hostPort[1]), request, true);
+
+                replies++;
+
+                if (middlewareCrashMode.get() == 2){
+                    //Crash after sending vote request and before receiving any replies
+                    //Simulating by ignoring all replies
+                    continue;
+                }
+
+                if (middlewareCrashMode.get() == 3){
+                    //Crash after receiving some replies but not all
+                    //Simulating by ignoring some replies
+                    if(replies > 1){
+                        continue;
+                    }
+                }
 
                 // retry once to wait for vote
                 // transaction becomes blocked
@@ -367,8 +396,11 @@ public class Middleware extends ResourceManager implements IServer {
         }
 
         logger.info("Successfully completed voteRequest");
-        if (middlewareCrashMode.get() == 4){
-            //Crash after receiving all replies but before deciding
+
+        if (middlewareCrashMode.get() == 2 || middlewareCrashMode.get() == 3 || middlewareCrashMode.get() == 4){
+            //2- Crash after sending vote request and before receiving any replies (simulated by ignoring all replies. see above)
+            //3- Crash after receiving some replies but not all (simulated by ignoring some replies. see above)
+            //4- Crash after receiving all replies but before deciding
             logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
             System.exit(1);
         }
@@ -703,11 +735,6 @@ public class Middleware extends ResourceManager implements IServer {
             }
         }
         return true;
-    }
-
-    @Override
-    public String getName() {
-        return null;
     }
 
     @Override

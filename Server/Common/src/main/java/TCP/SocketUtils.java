@@ -136,7 +136,7 @@ public class SocketUtils {
         }
     }
 
-    public static void startServerConnection(String address, int port, int maxConcurrentClients, IResourceManager rm){
+    public static void startServerConnection(String address, int port, int maxConcurrentClients, IServer rm){
         try {
             ServerSocket server = createServerSocket(address, port);
 

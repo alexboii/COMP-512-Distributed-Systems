@@ -22,10 +22,10 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
-import static TCP.SocketUtils.sendAndReceive;
 import static TCP.SocketUtils.sendRequest;
 
 /**
@@ -42,7 +42,7 @@ public class TransactionManager {
 
     private static final Logger logger = FileLogger.getLogger(TransactionManager.class);
 
-    public TransactionManager(String rmName) {
+    public TransactionManager(String rmName, AtomicInteger rMCrashMode) {
         this.lockManager = new LockManager();
         this.transactionStatus = new ConcurrentHashMap<>();
         this.mData = new RMHashMap();
@@ -51,10 +51,10 @@ public class TransactionManager {
         this.persistedTransactionStatus = new PersistedFile<>(rmName, SNAPSHOT_FLAG);
         this.persistedCommittedData = new ShadowFile(rmName);
 
-        this.loadData();
+        this.loadData(rMCrashMode);
     }
 
-    private void loadData() {
+    private void loadData(AtomicInteger rMCrashMode) {
         try {
             logger.info("Loading data for " + this.rmName);
             this.transactionStatus = this.persistedTransactionStatus.read();
@@ -90,8 +90,19 @@ public class TransactionManager {
                     default:
                         break;
                 }
+                if (rMCrashMode.get() == 5){
+                    //Crash during recovery
+                    logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
+                    System.exit(1);
+                }
             });
 
+            //still crash if there were no transaction statuses
+            if (rMCrashMode.get() == 5){
+                //Crash during recovery
+                logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
+                System.exit(1);
+            }
 
             this.mData = this.persistedCommittedData.restore();
         } catch (IOException | ClassNotFoundException e) {

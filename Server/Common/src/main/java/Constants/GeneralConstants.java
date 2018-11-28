@@ -102,6 +102,7 @@ public class GeneralConstants {
     public static final String COMMITTED_FLAG = "COMMITTED";
     public static final String SNAPSHOT_FLAG = "SNAPSHOT";
     public static final String COORDINATOR_FLAG = "COORDINATOR";
+    public static final String CRASH_AT_RECOVERY_FLAG = "CrashAtRecovery";
 
     // HAVE_COMMITTED
     public static final String RM_ADDRESS = "Address";

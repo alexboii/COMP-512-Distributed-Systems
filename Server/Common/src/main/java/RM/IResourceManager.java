@@ -194,13 +194,6 @@ public interface IResourceManager
     public boolean commit(int id);
 
     /**
-     * Method that each resource manager must implement in order to process requests properly
-     * @param request
-     * @param writer
-     */
-    public void handleRequest(JSONObject request, OutputStreamWriter writer) throws IOException, JSONException;
-
-    /**
      * Convenience for probing the resource manager.
      *
      * @return Name

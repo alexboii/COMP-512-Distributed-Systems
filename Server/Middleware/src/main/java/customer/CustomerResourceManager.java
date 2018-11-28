@@ -4,9 +4,6 @@ import LockManager.DeadlockException;
 import Model.*;
 import RM.ResourceManager;
 import Utilities.Trace;
-import org.json.JSONObject;
-
-import java.io.OutputStreamWriter;
 import java.util.Calendar;
 
 /**
@@ -63,11 +60,6 @@ public class CustomerResourceManager extends ResourceManager {
     // Adds room reservation to this customer
     public boolean reserveRoom(int xid, int customerID, String location, int price) throws DeadlockException {
         return reserveItem(xid, customerID, Room.getKey(location), location, price);
-    }
-
-    @Override
-    public void handleRequest(JSONObject request, OutputStreamWriter writer) {
-        return;
     }
 
     public int generateCID(int xid) {

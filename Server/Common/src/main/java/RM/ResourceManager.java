@@ -1,6 +1,7 @@
 package RM;
 
 import Model.*;
+import Persistence.PersistedFile;
 import TM.TransactionManager;
 import Utilities.FileLogger;
 import LockManager.*;
@@ -13,20 +14,41 @@ import LockManager.*;
 // CSE 593
 // -------------------------------
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
+import static Constants.GeneralConstants.CRASH_AT_RECOVERY_FLAG;
+
 abstract public class ResourceManager implements IResourceManager {
     protected String m_name = "";
     protected TransactionManager transactionManager;
-    protected AtomicInteger rMCrashMode = new AtomicInteger(0);
+    protected AtomicInteger rMCrashMode;
+    private PersistedFile<Boolean> crashDuringRecoveryStatus;
 
     private static final Logger logger = FileLogger.getLogger(ResourceManager.class);
 
     public ResourceManager(String p_name) {
         m_name = p_name;
-        this.transactionManager = new TransactionManager(m_name);
+        this.crashDuringRecoveryStatus = new PersistedFile<>(m_name, CRASH_AT_RECOVERY_FLAG);
+        initCrashMode();
+        this.transactionManager = new TransactionManager(m_name, rMCrashMode);
+    }
+
+    private void initCrashMode(){
+        rMCrashMode = new AtomicInteger(0);
+
+        //set crash mode to 8 if we need middleware to crash during recovery
+        if (crashDuringRecoveryStatus.exists()) {
+            try {
+                if(crashDuringRecoveryStatus.read()) {
+                    rMCrashMode.set(5);
+                }
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     // Query the number of available seats/rooms/cars
@@ -321,14 +343,20 @@ abstract public class ResourceManager implements IResourceManager {
         return transactionManager.abort(id);
     }
 
-    protected void setRMCrashMode(int mode){
+    protected void setRMCrashMode(int mode) throws IOException {
         logger.info("Enabling Resource Manager crash mode=" + mode);
         rMCrashMode.set(mode);
+        if(mode == 5){
+            crashDuringRecoveryStatus.save(true);
+        } else {
+            crashDuringRecoveryStatus.save(false);
+        }
     }
 
-    protected void resetCrash() {
+    protected void resetCrash() throws IOException {
         logger.info("Resetting crash modes");
         rMCrashMode.set(0);
+        crashDuringRecoveryStatus.save(false);
     }
 }
 
