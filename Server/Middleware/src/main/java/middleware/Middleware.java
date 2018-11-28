@@ -73,13 +73,13 @@ public class Middleware implements IServer {
         loadData();
     }
 
-    private void initCrashMode(){
+    private void initCrashMode() {
         middlewareCrashMode = new AtomicInteger(0);
 
         //set crash mode to 8 if we need middleware to crash during recovery
         if (crashDuringRecoveryStatus.exists()) {
             try {
-                if(crashDuringRecoveryStatus.read()) {
+                if (crashDuringRecoveryStatus.read()) {
                     middlewareCrashMode.set(8);
                     crashDuringRecoveryStatus.save(false); //so that it doesn't crash again at the next restart
                 }
@@ -111,7 +111,7 @@ public class Middleware implements IServer {
                 default:
                     break;
             }
-            if (middlewareCrashMode.get() == 8){
+            if (middlewareCrashMode.get() == 8) {
                 //Crash during recovery of the coordinator
                 logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
                 System.exit(1);
@@ -119,7 +119,7 @@ public class Middleware implements IServer {
         });
 
         //still crash if there were no active transactions
-        if (middlewareCrashMode.get() == 8){
+        if (middlewareCrashMode.get() == 8) {
             //Crash during recovery of the coordinator
             logger.info("Simulating middleware crash mode=" + middlewareCrashMode);
             System.exit(1);
@@ -305,7 +305,7 @@ public class Middleware implements IServer {
                         int mode = request.getInt(CRASH_MODE);
                         logger.info("Enable middleware crash mode=" + mode);
                         middlewareCrashMode.set(mode);
-                        if(mode == 8){
+                        if (mode == 8) {
                             crashDuringRecoveryStatus.save(true);
                         } else {
                             crashDuringRecoveryStatus.save(false);
@@ -356,16 +356,16 @@ public class Middleware implements IServer {
 
                 replies++;
 
-                if (middlewareCrashMode.get() == 2){
+                if (middlewareCrashMode.get() == 2) {
                     //Crash after sending vote request and before receiving any replies
                     //Simulating by ignoring all replies
                     continue;
                 }
 
-                if (middlewareCrashMode.get() == 3){
+                if (middlewareCrashMode.get() == 3) {
                     //Crash after receiving some replies but not all
                     //Simulating by ignoring some replies
-                    if(replies > 1){
+                    if (replies > 1) {
                         continue;
                     }
                 }
@@ -401,7 +401,7 @@ public class Middleware implements IServer {
 
         logger.info("Successfully completed voteRequest");
 
-        if (middlewareCrashMode.get() == 2 || middlewareCrashMode.get() == 3 || middlewareCrashMode.get() == 4){
+        if (middlewareCrashMode.get() == 2 || middlewareCrashMode.get() == 3 || middlewareCrashMode.get() == 4) {
             //2- Crash after sending vote request and before receiving any replies (simulated by ignoring all replies. see above)
             //3- Crash after receiving some replies but not all (simulated by ignoring some replies. see above)
             //4- Crash after receiving all replies but before deciding
@@ -458,7 +458,9 @@ public class Middleware implements IServer {
             System.exit(1);
         }
 
-        // xIDManager.completeTransaction(xid);
+        if (rms.size() == 0) {
+            xIDManager.completeTransaction(xid);
+        }
     }
 
     private boolean commitAll(JSONObject commitRequest) throws JSONException {
