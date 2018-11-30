@@ -72,9 +72,12 @@ public class XIDManager {
 
     public Set<String> completeTransaction(int xid) {
         logger.info("Completing transaction xid=" + xid);
-        Set rms = activeTransactions.remove(xid).getParticipants();
-        logger.info("RMs involved " + rms);
-        persistData();
+        Set rms = new HashSet();
+        if (activeTransactions.get(xid) != null) {
+            rms = activeTransactions.remove(xid).getParticipants();
+            logger.info("RMs involved " + rms);
+            persistData();
+        }
 
         return rms;
     }
