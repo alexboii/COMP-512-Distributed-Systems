@@ -432,8 +432,11 @@ public class Middleware implements IServer {
         }
 
         if (decision) {
+            logger.info("Committing customer manager for xid=" + xid);
+
             customerManager.commit(xid);
         } else {
+            logger.info("Aborting customer manager for xid=" + xid);
             customerManager.abort(xid);
         }
 
