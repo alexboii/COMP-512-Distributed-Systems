@@ -693,6 +693,51 @@ public class Middleware implements IServer {
         String location = request.getString(ROOM_LOCATION);
         JSONArray flightNumbers = request.getJSONArray(FLIGHT_NUMBERS);
 
+
+        //verify all flights available
+        for (int i = 0; i < flightNumbers.length(); i++) {
+            try {
+                String flightNumber = (String) flightNumbers.get(i);
+                int parsedFlightNumber = Integer.parseInt(flightNumber);
+
+                JSONObject queryFlightRequest = RequestFactory.getQueryFlightRequest(xid, parsedFlightNumber);
+                JSONObject result = sendAndReceiveAgnostic(ServerConstants.FLIGHTS_SERVER_ADDRESS, ServerConstants.FLIGHTS_SERVER_PORT, queryFlightRequest);
+
+                if (result.getInt(RESULT) < 1) {
+                    logger.info("Flight " + flightNumber + " not available. Canceling bundle request entirely.");
+                    return false;
+                }
+
+            } catch (NumberFormatException e) {
+                logger.severe(e.toString());
+                return false;
+            }
+        }
+
+        //verify car available
+        if (request.getBoolean(BOOK_CAR)) {
+            JSONObject queryCarRequest = RequestFactory.getQueryCarRequest(xid, location);
+            JSONObject result = sendAndReceiveAgnostic(ServerConstants.CAR_SERVER_ADDRESS, ServerConstants.CAR_SERVER_PORT, queryCarRequest);
+
+            if (result.getInt(RESULT) < 1) {
+                logger.info("Car not available. Canceling bundle request entirely.");
+                return false;
+            }
+        }
+
+        //verify room available
+        if (request.getBoolean(BOOK_ROOM)) {
+            JSONObject queryRoomRequest = RequestFactory.getQueryRoomRequest(xid, location);
+            JSONObject result = sendAndReceiveAgnostic(ServerConstants.ROOMS_SERVER_ADDRESS, ServerConstants.ROOMS_SERVER_PORT, queryRoomRequest);
+
+            if (result.getInt(RESULT) < 1) {
+                logger.info("Room not available. Canceling bundle request entirely.");
+                return false;
+            }
+        }
+
+
+        // make reservations
         for (int i = 0; i < flightNumbers.length(); i++) {
             try {
                 String flightNumber = (String) flightNumbers.get(i);

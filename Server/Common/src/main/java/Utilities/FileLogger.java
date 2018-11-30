@@ -23,6 +23,7 @@ public class FileLogger {
             }
         }
         logger.addHandler(handler);
+        logger.setLevel(Level.ALL);
         return logger;
     }
 
