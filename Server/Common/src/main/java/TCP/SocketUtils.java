@@ -32,9 +32,8 @@ public class SocketUtils {
                 try {
                     server.close();
                     logger.info("Server closed. host: " + host);
-                }
-                catch(Exception e) {
-                    System.err.println((char)27 + "[31;1mServer exception: " + (char)27 + "[0mUncaught exception");
+                } catch (Exception e) {
+                    System.err.println((char) 27 + "[31;1mServer exception: " + (char) 27 + "[0mUncaught exception");
                     e.printStackTrace();
                 }
             }
@@ -62,7 +61,7 @@ public class SocketUtils {
     public static <I> void sendReply(OutputStreamWriter writer, I result, boolean deadlock) throws IOException, JSONException {
         JSONObject reply = new JSONObject();
         reply.put(RESULT, result);
-        if(deadlock) {
+        if (deadlock) {
             reply.put(DEADLOCK, deadlock);
         }
         logger.info("Sending back reply: " + reply);
@@ -72,7 +71,7 @@ public class SocketUtils {
     }
 
     public static void sendReplyToClient(OutputStreamWriter writer, JSONObject result, boolean aborted) throws IOException, JSONException {
-        if(aborted){
+        if (aborted) {
             result.put(ABORTED, aborted);
         }
         logger.info("Sending back reply to client: " + result);
@@ -84,7 +83,7 @@ public class SocketUtils {
     public static <I> void sendReplyToClient(OutputStreamWriter writer, I result, boolean aborted) throws IOException, JSONException {
         JSONObject reply = new JSONObject();
         reply.put(RESULT, result);
-        if(aborted) {
+        if (aborted) {
             reply.put(ABORTED, aborted);
         }
         logger.info("Sending back reply to client: " + reply);
@@ -120,8 +119,10 @@ public class SocketUtils {
             logger.info("Reply from server: " + line);
             JSONObject reply = new JSONObject(line);
             return reply;
-        } catch (IOException | JSONException e) {
-            e.printStackTrace();
+        } catch (IOException | JSONException | NullPointerException e) {
+            if (!(e instanceof NullPointerException)) {
+                e.printStackTrace();
+            }
         }
 
         return null;
@@ -136,7 +137,7 @@ public class SocketUtils {
         }
     }
 
-    public static void startServerConnection(String address, int port, int maxConcurrentClients, IServer rm){
+    public static void startServerConnection(String address, int port, int maxConcurrentClients, IServer rm) {
         try {
             ServerSocket server = createServerSocket(address, port);
 

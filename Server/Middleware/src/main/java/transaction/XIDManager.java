@@ -89,16 +89,23 @@ public class XIDManager {
     }
 
     private void loadData() {
+        int max = -1;
+
         try {
             logger.info("Loading data for " + COORDINATOR_NAME);
             this.activeTransactions = this.persistedTransactions.read();
 
             for (int key : this.activeTransactions.keySet()) {
                 xid_counter.set(key > xid_counter.get() ? key : xid_counter.get());
+                max = Math.max(xid_counter.get(), max);
             }
         } catch (IOException | ClassNotFoundException e) {
             logger.info("Unable to load data for " + COORDINATOR_NAME);
             e.printStackTrace();
+        }
+
+        if (xid_counter.get() == max) {
+            xid_counter.getAndAdd(1);
         }
     }
 

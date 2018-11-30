@@ -116,7 +116,7 @@ public abstract class Client {
 
                 validate(result);
 
-                if (result.getBoolean(RESULT)) {
+                if (result != null && result.getBoolean(RESULT)) {
                     System.out.println("Flight added");
                     success = true;
                 } else {
@@ -143,7 +143,7 @@ public abstract class Client {
 
                 validate(result);
 
-                if (result.getBoolean(RESULT)) {
+                if (result != null && result.getBoolean(RESULT)) {
                     System.out.println("Cars added");
                     success = true;
                 } else {
@@ -168,7 +168,7 @@ public abstract class Client {
                 JSONObject result = SocketUtils.sendAndReceive(request, middlewareWriter, middlewareReader);
 
                 validate(result);
-                if (result.getBoolean(RESULT)) {
+                if (result != null && result.getBoolean(RESULT)) {
                     System.out.println("Rooms added");
                     success = true;
                 } else {
@@ -625,6 +625,10 @@ public abstract class Client {
     }
 
     private void validate(JSONObject result) throws JSONException, TransactionAbortException, InvalidTransactionException {
+        if (result == null) {
+            throw new InvalidTransactionException("Error with transaction. Deadlock happened or cannot contact middleware.");
+        }
+
         if (result.has(VALID_XID) && !result.getBoolean(VALID_XID)) {
             throw new InvalidTransactionException("No active transactions with the given XID");
         }
