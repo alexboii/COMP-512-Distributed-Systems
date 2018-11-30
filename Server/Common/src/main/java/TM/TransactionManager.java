@@ -20,7 +20,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
@@ -62,43 +64,48 @@ public class TransactionManager {
             if (this.persistedTransactionStatus.exists()) {
                 this.transactionStatus = this.persistedTransactionStatus.read();
 
-                this.transactionStatus.keySet().forEach(key -> {
-                    switch (this.transactionStatus.get(key).getStatus()) {
-                        case ABORTED:
-                        case COMMITTED:
-                            sendDecisionFinalizedSignal(key);
-                            break;
-                        case UNCERTAIN:
-                            JSONObject result = null;
+                if (transactionStatus != null && transactionStatus.size() != 0) {
 
-                            // attempt to connect to middleware while this is null
-                            while (result == null) {
-                                result = getDecision(key);
-                            }
+                    this.transactionStatus.keySet().forEach(key -> {
 
-                            try {
-                                if (result.getBoolean(RESULT)) {
-                                    commit(key);
-                                } else {
-                                    abort(key);
+                        switch (this.transactionStatus.get(key).getStatus()) {
+                            case ABORTED:
+                            case COMMITTED:
+                                sendDecisionFinalizedSignal(key);
+                                break;
+                            case UNCERTAIN:
+                                JSONObject result = null;
+
+                                // attempt to connect to middleware while this is null
+                                while (result == null) {
+                                    result = getDecision(key);
                                 }
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
 
-                            break;
-                        case PREPARED:
-                            abort(key);
-                            break;
-                        default:
-                            break;
-                    }
-                    if (rMCrashMode.get() == 5) {
-                        //Crash during recovery
-                        logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
-                        System.exit(1);
-                    }
-                });
+                                try {
+                                    if (result.getBoolean(RESULT)) {
+                                        commit(key);
+                                    } else {
+                                        abort(key);
+                                    }
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
+
+                                break;
+                            case PREPARED:
+                                abort(key);
+                                break;
+                            default:
+                                break;
+                        }
+
+                        if (rMCrashMode.get() == 5) {
+                            //Crash during recovery
+                            logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
+                            System.exit(1);
+                        }
+                    });
+                }
             }
         } catch (IOException | ClassNotFoundException e) {
             logger.info("Unable to load data for " + this.rmName);
