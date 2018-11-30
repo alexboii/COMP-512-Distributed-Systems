@@ -1,6 +1,0 @@
-customer/CustomerResourceManager.class
-transaction/ActiveTransaction.class
-middleware/Middleware$1.class
-middleware/Middleware$2.class
-middleware/Middleware.class
-transaction/XIDManager.class

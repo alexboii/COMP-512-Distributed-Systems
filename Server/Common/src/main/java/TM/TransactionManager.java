@@ -38,6 +38,7 @@ public class TransactionManager {
     private LockManager lockManager;
     private Map<Integer, TransactionStatus> transactionStatus;
     private PersistedFile<Map<Integer, TransactionStatus>> persistedTransactionStatus;
+    private PersistedFile<LockManager> persistedLockManager;
     private RMHashMap mData;
     private ShadowFile persistedCommittedData;
     private String rmName;
@@ -52,6 +53,7 @@ public class TransactionManager {
 
         this.persistedTransactionStatus = new PersistedFile<>(rmName, SNAPSHOT_FLAG);
         this.persistedCommittedData = new ShadowFile(rmName);
+        this.persistedLockManager = new PersistedFile<>(rmName, "LM");
 
         this.loadData(rMCrashMode);
     }
@@ -60,47 +62,61 @@ public class TransactionManager {
 
         logger.info("Loading data for " + this.rmName);
 
+        RMHashMap hm = this.persistedCommittedData.restore();
+        this.mData = hm == null ? new RMHashMap() : hm;
+
+        logger.info("Loaded committed data for " + this.rmName);
+
         try {
+            if (this.persistedLockManager.exists()) {
+                this.lockManager = this.persistedLockManager.read();
+                logger.info("Succesfully loaded LM for " + this.rmName);
+            }
+
             if (this.persistedTransactionStatus.exists()) {
                 this.transactionStatus = this.persistedTransactionStatus.read();
 
                 if (transactionStatus != null && transactionStatus.size() != 0) {
 
                     this.transactionStatus.keySet().forEach(key -> {
+                        logger.info("Loading transaction status xid=" + key + " for " + this.rmName + " with status "
+                                + this.transactionStatus.get(key).getStatus());
 
                         switch (this.transactionStatus.get(key).getStatus()) {
-                            case ABORTED:
-                            case COMMITTED:
-                                sendDecisionFinalizedSignal(key);
-                                break;
-                            case UNCERTAIN:
-                                JSONObject result = null;
+                        case ABORTED:
+                        case COMMITTED:
+                            sendDecisionFinalizedSignal(key);
+                            break;
+                        case UNCERTAIN:
+                            JSONObject result = null;
 
-                                // attempt to connect to middleware while this is null
-                                while (result == null) {
-                                    result = getDecision(key);
+                            // attempt to connect to middleware while this is null
+                            while (result == null) {
+                                result = getDecision(key);
+                            }
+
+                            try {
+                                if (result.getBoolean(RESULT)) {
+                                    commit(key);
+                                } else {
+                                    abort(key);
                                 }
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
 
-                                try {
-                                    if (result.getBoolean(RESULT)) {
-                                        commit(key);
-                                    } else {
-                                        abort(key);
-                                    }
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-
-                                break;
-                            case PREPARED:
-                                abort(key);
-                                break;
-                            default:
-                                break;
+                            break;
+                        case PREPARED:
+                            abort(key);
+                            break;
+                        default:
+                            break;
                         }
 
+                        logger.info("Loaded transaction status xid=" + key);
+
                         if (rMCrashMode.get() == 5) {
-                            //Crash during recovery
+                            // Crash during recovery
                             logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
                             System.exit(1);
                         }
@@ -112,24 +128,20 @@ public class TransactionManager {
             e.printStackTrace();
         }
 
-        //still crash during recovery if there were no transaction statuses
+        // still crash during recovery if there were no transaction statuses
         if (rMCrashMode.get() == 5) {
-            //Crash during recovery
+            // Crash during recovery
             logger.info("Simulating Resource Manager crash mode=" + rMCrashMode);
             System.exit(1);
         }
-
-        RMHashMap hm = this.persistedCommittedData.restore();
-
-        this.mData = hm == null ? new RMHashMap() : hm;
-
     }
 
     public JSONObject getDecision(int xid) {
         JSONObject result = null;
 
         try {
-            Socket server = new Socket(InetAddress.getByName(ServerConstants.MIDDLEWARE_SERVER_ADDRESS), ServerConstants.MIDDLEWARE_PORT);
+            Socket server = new Socket(InetAddress.getByName(ServerConstants.MIDDLEWARE_SERVER_ADDRESS),
+                    ServerConstants.MIDDLEWARE_PORT);
 
             OutputStreamWriter writer = new OutputStreamWriter(server.getOutputStream(), CHAR_SET);
             BufferedReader reader = new BufferedReader(new InputStreamReader(server.getInputStream(), CHAR_SET));
@@ -187,7 +199,8 @@ public class TransactionManager {
     }
 
     /**
-     * Reads data from transaction's local copy. If not available then reads data from the global copy
+     * Reads data from transaction's local copy. If not available then reads data
+     * from the global copy
      *
      * @param xid
      * @param key
@@ -196,12 +209,15 @@ public class TransactionManager {
      */
     public ResourceItem readDataTransaction(int xid, String key) throws DeadlockException {
         lockManager.Lock(xid, key, TransactionLockObject.LockType.LOCK_READ);
+        this.persistLockManager();
 
-        if (transactionStatus.get(xid) != null && transactionStatus.get(xid).getDeleteSet() != null && transactionStatus.get(xid).getDeleteSet().contains(key)) {
+        if (transactionStatus.get(xid) != null && transactionStatus.get(xid).getDeleteSet() != null
+                && transactionStatus.get(xid).getDeleteSet().contains(key)) {
             return null;
         }
 
-        if (transactionStatus.get(xid) != null && transactionStatus.get(xid).getWriteSet() != null && transactionStatus.get(xid).getWriteSet().get(key) != null) {
+        if (transactionStatus.get(xid) != null && transactionStatus.get(xid).getWriteSet() != null
+                && transactionStatus.get(xid).getWriteSet().get(key) != null) {
             return transactionStatus.get(xid).getWriteSet().get(key);
         }
 
@@ -218,6 +234,8 @@ public class TransactionManager {
      */
     public void writeDataTransaction(int xid, String key, ResourceItem value) throws DeadlockException {
         lockManager.Lock(xid, key, TransactionLockObject.LockType.LOCK_WRITE);
+        this.persistLockManager();
+
         transactionStatus.computeIfAbsent(xid, k -> new TransactionStatus());
         transactionStatus.get(xid).getWriteSet().put(key, value);
 
@@ -237,6 +255,7 @@ public class TransactionManager {
      */
     public void removeDataTransaction(int xid, String key) throws DeadlockException {
         lockManager.Lock(xid, key, TransactionLockObject.LockType.LOCK_WRITE);
+        this.persistLockManager();
 
         if (transactionStatus.get(xid) != null) {
             transactionStatus.get(xid).getWriteSet().remove(key);
@@ -248,14 +267,15 @@ public class TransactionManager {
     }
 
     public boolean voteReply(int xid) {
-        // TODO: Unsure -- should we be persisting all transactions at the same time, or just the transaction with which the reply is concerned?
-        // Also, if something comes during this time, (another request) for said transaction, do we ignore it? do we care?
+        // TODO: Unsure -- should we be persisting all transactions at the same time, or
+        // just the transaction with which the reply is concerned?
+        // Also, if something comes during this time, (another request) for said
+        // transaction, do we ignore it? do we care?
         transactionStatus.get(xid).setStatus(STATUS.PREPARED);
 
         transactionStatus.get(xid).setStatus(STATUS.UNCERTAIN);
         return this.persistSnapshot();
     }
-
 
     public boolean persistSnapshot() {
         try {
@@ -284,6 +304,21 @@ public class TransactionManager {
         }
         logger.info("Failed to save committed data for " + rmName);
         return false;
+    }
+
+    public boolean persistLockManager() {
+        try {
+            synchronized (lockManager) {
+                this.persistedLockManager.save(lockManager);
+            }
+            logger.info("Successfully saved lock manager for " + rmName);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            logger.info("Unable to write lock manager to disk for " + rmName);
+            return false;
+        }
+        return true;
     }
 
     public boolean commit(int xid) {
@@ -324,7 +359,6 @@ public class TransactionManager {
             return res;
         }
 
-
         return true;
     }
 
@@ -348,19 +382,20 @@ public class TransactionManager {
             logger.info("Releasing all locks held by transaction: " + xid);
 
             lockManager.UnlockAll(xid);
+            this.persistLockManager();
         }
     }
 
     private String getAddress() {
         switch (rmName) {
-            case "Flights":
-                return ServerConstants.FLIGHTS_SERVER_ADDRESS + ":" + ServerConstants.FLIGHTS_SERVER_PORT;
-            case "Cars":
-                return ServerConstants.CAR_SERVER_ADDRESS + ":" + ServerConstants.CAR_SERVER_PORT;
-            case "Rooms":
-                return ServerConstants.ROOMS_SERVER_ADDRESS + ":" + ServerConstants.ROOMS_SERVER_PORT;
-            default:
-                return null;
+        case "Flights":
+            return ServerConstants.FLIGHTS_SERVER_ADDRESS + ":" + ServerConstants.FLIGHTS_SERVER_PORT;
+        case "Cars":
+            return ServerConstants.CAR_SERVER_ADDRESS + ":" + ServerConstants.CAR_SERVER_PORT;
+        case "Rooms":
+            return ServerConstants.ROOMS_SERVER_ADDRESS + ":" + ServerConstants.ROOMS_SERVER_PORT;
+        default:
+            return null;
         }
     }
 
