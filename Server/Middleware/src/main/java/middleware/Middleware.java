@@ -372,27 +372,13 @@ public class Middleware implements IServer {
 
                 // retry once to wait for vote
                 // transaction becomes blocked
-                if (result == null) {
-                    logger.info("Returned false from voteRequest because of bad request");
-                    logger.info("Retrying to acquire vote");
-
-                    Thread.sleep(40000);
-
-                    result = sendAndReceiveAgnostic(host, Integer.parseInt(hostPort[1]), request, true);
-
-                    // if second time is still bad, then
-                    if (result == null) {
-                        logger.info("Failed to acquire vote from second attempt");
-                        throw new JSONException("Invalid");
-                    }
+                // if second time is still bad, then
+                if (result == null || !result.getBoolean(RESULT)) {
+                    logger.info("Failed to acquire vote attempt");
+                    throw new JSONException("Invalid");
                 }
 
-                // if one is false, we abort everything
-                if (!result.getBoolean(RESULT)) {
-                    return false;
-                }
-
-            } catch (JSONException | InterruptedException | DeadlockException e) {
+            } catch (JSONException | NullPointerException | DeadlockException e) {
                 logger.info("Returned false from voteRequest");
                 e.printStackTrace();
                 return false;
@@ -449,7 +435,6 @@ public class Middleware implements IServer {
             customerManager.commit(xid);
         } else {
             customerManager.abort(xid);
-            timers.remove(xid);
         }
 
         if (middlewareCrashMode.get() == 7) {
@@ -465,6 +450,7 @@ public class Middleware implements IServer {
 
     private boolean commitAll(JSONObject commitRequest) throws JSONException {
         int xid = commitRequest.getInt(XID);
+        timers.remove(xid);
         boolean decision = voteRequest(xid);
         sendDecision(xid, decision);
         return decision;
