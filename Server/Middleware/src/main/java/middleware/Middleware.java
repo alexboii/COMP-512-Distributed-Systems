@@ -3,9 +3,9 @@ package middleware;
 import Constants.ServerConstants;
 import LockManager.DeadlockException;
 import RM.ResourceManager;
-import Tcp.IServer;
-import Tcp.RequestFactory;
-import Tcp.SocketUtils;
+import TCP.IServer;
+import TCP.RequestFactory;
+import TCP.SocketUtils;
 import Utilities.FileLogger;
 import customer.CustomerResourceManager;
 import org.json.JSONArray;
@@ -19,18 +19,16 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.sql.Time;
-import java.util.Map;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import static Constants.GeneralConstants.*;
 import static Constants.ServerConstants.MIDDLEWARE_SERVER_ADDRESS;
-import static Tcp.SocketUtils.sendReply;
-import static Tcp.SocketUtils.sendReplyToClient;
+import static TCP.RequestFactory.getDecisionRequest;
+import static TCP.RequestFactory.getVoteRequest;
+import static TCP.SocketUtils.sendReply;
+import static TCP.SocketUtils.sendReplyToClient;
 
 public class Middleware extends ResourceManager implements IServer {
     private static final String serverName = "Middleware";
@@ -192,13 +190,38 @@ public class Middleware extends ResourceManager implements IServer {
                         break;
 
                     case COMMIT:
-                        commitAll(request);
-                        sendReply(writer, true);
+                        boolRes = commitAll(request);
+                        sendReply(writer, boolRes);
                         break;
 
                     case ABORT:
                         abortAll(request.getInt(XID));
                         sendReply(writer, true);
+                        break;
+
+                    case VOTE_REQUEST:
+                        int xid = request.getInt(XID);
+                        boolRes = voteReply(xid);
+                        sendReply(writer, boolRes);
+
+                        if (!boolRes) {
+                            abort(xid);
+                        }
+
+                        break;
+
+                    case DECISION:
+                        xid = request.getInt(XID);
+                        boolean type = request.getBoolean(DECISION_FIELD);
+
+                        if (type) {
+                            boolRes = commit(xid);
+                        } else {
+                            boolRes = abort(xid);
+                        }
+
+                        sendReply(writer, boolRes);
+
                         break;
                 }
                 break;
@@ -217,12 +240,72 @@ public class Middleware extends ResourceManager implements IServer {
         }
     }
 
-    private void commitAll(JSONObject commitRequest) throws JSONException {
-        int xid = commitRequest.getInt(XID);
-        logger.info("Committing transaction: " + xid);
+    private boolean voteRequest(int xid) {
+        Set<String> rms = xIDManager.activeTransactions.get(xid);
+        logger.info("Sending vote request to " + rms);
+
+        for (String rm : rms) {
+            String[] hostPort = rm.split(":");
+            String host = hostPort[0];
+
+            try {
+                JSONObject request = getVoteRequest(xid);
+                JSONObject result = sendAndReceiveAgnostic(host, Integer.parseInt(hostPort[1]), request, true);
+
+                if (result == null || !result.getBoolean(RESULT)) {
+                    logger.info("Returned false from voteRequest because of bad request");
+
+                    throw new JSONException("Invalid");
+                }
+
+            } catch (JSONException | DeadlockException e) {
+                logger.info("Returned false from voteRequest");
+                e.printStackTrace();
+                return false;
+            }
+        }
+
+        logger.info("Successfully completed voteRequest");
+        return true;
+    }
+
+    private void sendDecision(int xid, boolean decision) {
         Set<String> rms = xIDManager.completeTransaction(xid);
-        sendRequestToRMs(commitRequest, rms);
-        customerManager.commit(xid);
+        logger.info("Sending vote request to " + rms);
+
+        for (String rm : rms) {
+            String[] hostPort = rm.split(":");
+            String host = hostPort[0];
+
+            try {
+                JSONObject request = getDecisionRequest(xid, decision);
+                JSONObject result = sendAndReceiveAgnostic(host, Integer.parseInt(hostPort[1]), request, true);
+
+                if (result == null || !result.getBoolean(RESULT)) {
+                    throw new JSONException("Invalid");
+                }
+
+            } catch (JSONException | DeadlockException e) {
+                logger.info("Returned false from sendDecision");
+                e.printStackTrace();
+            }
+        }
+
+        if (decision) {
+            customerManager.commit(xid);
+        } else {
+            customerManager.abort(xid);
+            timers.remove(xid);
+        }
+
+    }
+
+
+    private boolean commitAll(JSONObject commitRequest) throws JSONException {
+        int xid = commitRequest.getInt(XID);
+        boolean decision = voteRequest(xid);
+        sendDecision(xid, decision);
+        return decision;
     }
 
     private void abortAll(int xid) throws JSONException {
@@ -252,10 +335,13 @@ public class Middleware extends ResourceManager implements IServer {
      * @param request
      * @return
      */
-    private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request) throws JSONException, DeadlockException {
+    private JSONObject sendAndReceiveAgnostic(String serverAddress, int port, JSONObject request, Boolean... isTransactionOperation) throws JSONException, DeadlockException {
         JSONObject result = null;
         int xid = request.getInt(XID);
-        xIDManager.addRM(xid, serverAddress + ":" + port);
+
+        if (isTransactionOperation.length == 0) {
+            xIDManager.addRM(xid, serverAddress + ":" + port);
+        }
 
         try {
             logger.info("Sending request " + request + " to server: " + serverAddress + ":" + port);

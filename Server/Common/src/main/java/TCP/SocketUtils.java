@@ -1,4 +1,4 @@
-package Tcp;
+package TCP;
 
 import RM.IResourceManager;
 import Utilities.FileLogger;

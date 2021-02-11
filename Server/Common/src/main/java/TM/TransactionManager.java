@@ -3,13 +3,22 @@ package TM;
 import LockManager.LockManager;
 import Model.RMHashMap;
 import Model.ResourceItem;
+import Persistence.PersistedFile;
 import Utilities.FileLogger;
 import LockManager.*;
+import Utilities.InvalidTransactionException;
+import Utilities.TransactionAbortException;
 
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
+
+import static Constants.GeneralConstants.COMMITTED_FLAG;
+import static Constants.GeneralConstants.SNAPSHOT_FLAG;
 
 /**
  * Implements 2 Phase Locking
@@ -17,28 +26,69 @@ import java.util.logging.Logger;
 public class TransactionManager {
 
     private LockManager lockManager;
-    private Map<Integer, Map<String, ResourceItem>> writeSet;
-    private Map<Integer, Set<String>> deleteSet;
-    private RMHashMap m_data;
+    private Map<Integer, Snapshot> snapshots;
+    private PersistedFile<Map<Integer, Snapshot>> persistedSnapshot;
+    private RMHashMap mData;
+    private PersistedFile<RMHashMap> persistedCommittedData;
+    private String rmName;
 
     private static final Logger logger = FileLogger.getLogger(TransactionManager.class);
 
-    public TransactionManager() {
-        lockManager = new LockManager();
-        writeSet = new ConcurrentHashMap<>();
-        deleteSet = new ConcurrentHashMap<>();
-        m_data = new RMHashMap();
+    public TransactionManager(String rmName) {
+        this.lockManager = new LockManager();
+        this.snapshots = new ConcurrentHashMap<>();
+        this.mData = new RMHashMap();
+        this.rmName = rmName;
+
+        this.persistedSnapshot = new PersistedFile<>(rmName, SNAPSHOT_FLAG);
+        this.persistedCommittedData = new PersistedFile<>(rmName, COMMITTED_FLAG);
+
+        this.loadData();
+    }
+
+    private static class Snapshot implements Serializable {
+
+        private static final long serialVersionUID = 1415726875793785707L;
+
+        private Map<String, ResourceItem> writeSet;
+        private Set<String> deleteSet;
+
+        Snapshot() {
+            this.writeSet = new ConcurrentHashMap<>();
+            // keep this as hash set, otherwise it fails to persist
+            this.deleteSet = new HashSet<>();
+        }
+
+        public Map<String, ResourceItem> getWriteSet() {
+            return writeSet;
+        }
+
+        public Set<String> getDeleteSet() {
+            return deleteSet;
+        }
+    }
+
+    private void loadData() {
+        try {
+            logger.info("Loading data for " + this.rmName);
+            this.snapshots = this.persistedSnapshot.read();
+            this.mData = this.persistedCommittedData.read();
+        } catch (IOException | ClassNotFoundException e) {
+            logger.info("Unable to load data for " + this.rmName);
+            e.printStackTrace();
+        }
     }
 
     /**
      * Reads a data item from global map
+     *
      * @param xid
      * @param key
      * @return
      */
     public ResourceItem readCommittedData(int xid, String key) {
-        synchronized (m_data) {
-            ResourceItem item = m_data.get(key);
+        synchronized (mData) {
+            ResourceItem item = mData.get(key);
             if (item != null) {
                 return (ResourceItem) item.clone();
             }
@@ -48,27 +98,30 @@ public class TransactionManager {
 
     /**
      * Writes a data item to global map
+     *
      * @param key
      * @param value
      */
     public void commitData(String key, ResourceItem value) {
-        synchronized (m_data) {
-            m_data.put(key, value);
+        synchronized (mData) {
+            mData.put(key, value);
         }
     }
 
     /**
      * Remove the item out of global map
+     *
      * @param key
      */
     public void removeDataAndCommit(String key) {
-        synchronized (m_data) {
-            m_data.remove(key);
+        synchronized (mData) {
+            mData.remove(key);
         }
     }
 
     /**
      * Reads data from transaction's local copy. If not available then reads data from the global copy
+     *
      * @param xid
      * @param key
      * @return
@@ -77,11 +130,12 @@ public class TransactionManager {
     public ResourceItem readDataTransaction(int xid, String key) throws DeadlockException {
         lockManager.Lock(xid, key, TransactionLockObject.LockType.LOCK_READ);
 
-        if(deleteSet.get(xid) != null && deleteSet.get(xid).contains(key)) {
+        if (snapshots.get(xid) != null && snapshots.get(xid).getDeleteSet() != null && snapshots.get(xid).getDeleteSet().contains(key)) {
             return null;
         }
-        if(writeSet.get(xid) != null && writeSet.get(xid).get(key) != null) {
-            return writeSet.get(xid).get(key);
+
+        if (snapshots.get(xid) != null && snapshots.get(xid).getWriteSet() != null && snapshots.get(xid).getWriteSet().get(key) != null) {
+            return snapshots.get(xid).getWriteSet().get(key);
         }
 
         return readCommittedData(xid, key);
@@ -89,6 +143,7 @@ public class TransactionManager {
 
     /**
      * Writes data to transaction's local copy
+     *
      * @param xid
      * @param key
      * @param value
@@ -96,18 +151,19 @@ public class TransactionManager {
      */
     public void writeDataTransaction(int xid, String key, ResourceItem value) throws DeadlockException {
         lockManager.Lock(xid, key, TransactionLockObject.LockType.LOCK_WRITE);
-        if(writeSet.get(xid) == null) {
-            writeSet.put(xid, new ConcurrentHashMap<>());
-        }
-        writeSet.get(xid).put(key, value);
+        snapshots.computeIfAbsent(xid, k -> new Snapshot());
+        snapshots.get(xid).getWriteSet().put(key, value);
 
-        if (deleteSet.get(xid) != null) {
-            deleteSet.get(xid).remove(key);
+        if (snapshots.get(xid).getDeleteSet().contains(xid)) {
+            snapshots.get(xid).getDeleteSet().remove(key);
         }
+
+        this.persistSnapshot();
     }
 
     /**
      * Removes data from transaction's local copy
+     *
      * @param xid
      * @param key
      * @throws DeadlockException
@@ -115,45 +171,82 @@ public class TransactionManager {
     public void removeDataTransaction(int xid, String key) throws DeadlockException {
         lockManager.Lock(xid, key, TransactionLockObject.LockType.LOCK_WRITE);
 
-        if(writeSet.get(xid) != null) {
-            writeSet.get(xid).remove(key);
+        if (snapshots.get(xid) != null) {
+            snapshots.get(xid).getWriteSet().remove(key);
+            snapshots.get(xid).getDeleteSet().add(key);
+
+            this.persistSnapshot();
         }
 
-        if(deleteSet.get(xid) == null) {
-            deleteSet.put(xid, ConcurrentHashMap.newKeySet());
-        }
-        deleteSet.get(xid).add(key);
     }
 
-    public void commit(int xid) {
+    public boolean voteReply(int xid) {
+        // TODO: Unsure -- should we be persisting all transactions at the same time, or just the transaction with which the reply is concerned?
+        // Also, if something comes during this time, (another request) for said transaction, do we ignore it? do we care?
+        return this.persistSnapshot();
+    }
+
+
+    public boolean persistSnapshot() {
+        try {
+            this.persistedSnapshot.save(snapshots);
+            logger.info("Successfully saved snapshot for " + rmName);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            logger.info("Unable to write snapshot data to disk for " + rmName);
+            return false;
+        }
+
+        return true;
+    }
+
+    public boolean persistData() {
+        try {
+            this.persistedCommittedData.save(mData);
+            logger.info("Successfully saved committed data for " + rmName);
+        } catch (IOException e) {
+            e.printStackTrace();
+            logger.info("Unable to write committed data to disk for " + rmName);
+            return false;
+        }
+
+        return true;
+    }
+
+    public boolean commit(int xid) {
 
         logger.info("Committing xid: " + xid);
 
-        if(writeSet.get(xid) != null) {
-            writeSet.get(xid).forEach((key, value) -> commitData(key, value));
+        if (snapshots.get(xid) != null) {
+            snapshots.get(xid).getWriteSet().forEach((key, value) -> commitData(key, value));
+            snapshots.get(xid).getDeleteSet().forEach(key -> removeDataAndCommit(key));
+
+            clear(xid);
+            this.persistSnapshot();
         }
 
-        if(deleteSet.get(xid) != null) {
-            deleteSet.get(xid).forEach(key -> removeDataAndCommit(key));
-        }
 
-        clear(xid);
+        return this.persistData();
     }
 
-    public void abort(int xid) {
+    public boolean abort(int xid) {
         logger.info("Aborting xid: " + xid);
         clear(xid);
+        return this.persistSnapshot();
     }
 
     private void clear(int xid) {
-        logger.info("Removing local WriteSet(xid=" + xid +") = " + writeSet.get(xid));
-        logger.info("Removing local DeleteSet(xid=" + xid +") = " + deleteSet.get(xid));
+        if (snapshots.get(xid) != null) {
+            logger.info("Removing local WriteSet(xid=" + xid + ") = " + snapshots.get(xid).getWriteSet());
+            logger.info("Removing local DeleteSet(xid=" + xid + ") = " + snapshots.get(xid).getDeleteSet());
 
-        writeSet.remove(xid);
-        deleteSet.remove(xid);
+            snapshots.remove(xid);
 
-        logger.info("Releasing all locks held by transaction: " + xid);
-        lockManager.UnlockAll(xid);
+            logger.info("Releasing all locks held by transaction: " + xid);
+
+            lockManager.UnlockAll(xid);
+        }
     }
 
 }

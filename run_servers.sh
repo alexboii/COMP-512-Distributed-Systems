@@ -15,7 +15,7 @@ COMMON_SERVER="mimi.cs.mcgill.ca"
 CARS_SERVER="lab2-11.cs.mcgill.ca"
 FLIGHTS_SERVER="lab2-12.cs.mcgill.ca"
 ROOMS_SERVER="lab2-13.cs.mcgill.ca"
-MIDDLEWARE_SERVER="lab2-14.cs.mcgill.ca"
+MIDDLEWARE_SERVER="lab2-19.cs.mcgill.ca"
 ENTITIES_SERVERS="$CARS_SERVER $FLIGHTS_SERVER $ROOMS_SERVER $MIDDLEWARE_SERVER"
 
 #declare entities
@@ -76,15 +76,24 @@ done
 #run the different servers on different machines
 
 echo RUNNING CARS SERVER
+sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$CARS_SERVER" "rm -rf /tmp/Cars_SNAPSHOT_group01.data"
+sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$CARS_SERVER" "rm -rf /tmp/Cars_COMMITTED_group01.data"
 echo $CARS_COMMAND | sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$CARS_SERVER" "cat > ~/run_cars.sh; chmod 777 ~/run_cars.sh; nohup ./run_cars.sh > /dev/null 2>&1 &"
 
 echo RUNNING FLIGHTS SERVER
+sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$FLIGHTS_SERVER" "rm -rf /tmp/Flights_SNAPSHOT_group01.data"
+sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$FLIGHTS_SERVER" "rm -rf /tmp/Flights_COMMITTED_group01.data"
 echo $FLIGHTS_COMMAND | sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$FLIGHTS_SERVER" "cat > ~/run_flights.sh; chmod 777 ~/run_flights.sh; nohup ./run_flights.sh > /dev/null 2>&1 &"
 
 echo RUNNING ROOMS SERVER
+sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ROOMS_SERVER" "rm -rf /tmp/Rooms_SNAPSHOT_group01.data"
+sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ROOMS_SERVER" "rm -rf /tmp/Rooms_COMMITTED_group01.data"
 echo $ROOMS_COMMAND | sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$ROOMS_SERVER" "cat > ~/run_rooms.sh; chmod 777 ~/run_rooms.sh; nohup ./run_rooms.sh > /dev/null 2>&1 &"
 
 echo RUNNING MIDDLEWARE SERVER
+sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$MIDDLEWARE_SERVER" "rm -rf /tmp/Customers_SNAPSHOT_group01.data"
+sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$MIDDLEWARE_SERVER" "rm -rf /tmp/Customers_COMMITTED_group01.data"
+sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$MIDDLEWARE_SERVER" "rm -rf /tmp/coordinator_COORDINATOR_group01.data"
 echo $MIDDLEWARE_COMMAND | sshpass -p $password ssh -o StrictHostKeyChecking=no "$username@$MIDDLEWARE_SERVER" "cat > ~/run_middleware.sh; chmod 777 ~/run_middleware.sh; nohup ./run_middleware.sh > /dev/null 2>&1 &"
 
 
